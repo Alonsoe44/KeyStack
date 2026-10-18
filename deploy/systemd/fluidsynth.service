@@ -1,0 +1,13 @@
+# systemd *user* unit (~/.config/systemd/user/) — no root needed.
+[Unit]
+Description=FluidSynth engine
+
+[Service]
+ExecStart=/usr/bin/fluidsynth -is -a alsa -m alsa_seq \
+  -o audio.alsa.device=hw:BossDAC,0 -o audio.period-size=64 -o audio.periods=2 \
+  -o shell.port=9800 -g 0.5 /usr/share/sounds/sf2/FluidR3_GM.sf2
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

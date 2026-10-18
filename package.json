@@ -1,39 +1,27 @@
 {
-  "name": "KeyStack",
+  "name": "keystack",
   "version": "0.0.1",
   "type": "module",
   "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint",
+    "dev": "npm run dev --workspace apps/web",
+    "dev:lan": "npm run dev:lan --workspace apps/web",
+    "dev:server": "npm run dev --workspace apps/server",
+    "build": "npm run build --workspace packages/shared && npm run build --workspace apps/server && npm run build --workspace apps/web",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
     "format": "prettier --write \"**/*.{ts,tsx}\"",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "@base-ui/react": "^1.7.0",
-    "class-variance-authority": "^0.7.1",
-    "clsx": "^2.1.1",
-    "lucide-react": "^1.37.0",
-    "next": "16.2.6",
-    "next-themes": "^0.4.6",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "shadcn": "^4.19.0",
-    "tailwind-merge": "^3.6.0",
-    "tw-animate-css": "^1.4.0"
+    "typecheck": "npm run typecheck --workspaces --if-present",
+    "pi:deploy": "./deploy/sync.sh",
+    "pi:dev": "./deploy/dev.sh"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.6",
     "prettier": "^3.8.3",
     "prettier-plugin-tailwindcss": "^0.8.0",
-    "tailwindcss": "^4",
     "typescript": "^5"
   }
 }

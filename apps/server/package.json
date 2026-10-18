@@ -1,0 +1,27 @@
+{
+  "name": "keystack-server",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "PORT=4000 CORS_ORIGIN=* tsx watch src/main.ts",
+    "build": "esbuild src/main.ts --bundle --platform=node --target=node20 --format=cjs --external:bufferutil --external:utf-8-validate --outfile=dist/index.cjs",
+    "start": "node dist/index.cjs",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "keystack-shared": "*",
+    "ws": "^8.18.0"
+  },
+  "devDependencies": {
+    "@types/express": "^5.0.0",
+    "@types/node": "^20",
+    "@types/ws": "^8.5.13",
+    "esbuild": "^0.25.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5",
+    "vitest": "^3.0.0"
+  }
+}

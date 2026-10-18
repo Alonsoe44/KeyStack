@@ -1,0 +1,19 @@
+# systemd *user* unit (~/.config/systemd/user/) — no root needed.
+[Unit]
+Description=KeyStack server (static frontend + API + MIDI routing)
+After=fluidsynth.service
+# Wants=, not Requires=: the server must survive FluidSynth restarts; its
+# reconciler handles a missing synth on its own.
+Wants=fluidsynth.service
+
+[Service]
+WorkingDirectory=%h/keystack
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=STATIC_DIR=%h/keystack/out
+ExecStart=%h/keystack/node/bin/node %h/keystack/server/index.cjs
+Restart=always
+RestartSec=2
+
+[Install]
+WantedBy=default.target

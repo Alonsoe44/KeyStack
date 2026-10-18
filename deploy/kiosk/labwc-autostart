@@ -1,0 +1,5 @@
+# Installed as ~/.config/labwc/autostart. Raspberry Pi OS starts labwc with
+# -m, so this runs in addition to /etc/xdg/labwc/autostart, not instead of it.
+#
+# Backgrounded: kiosk.sh waits for the server, and must not block the session.
+~/keystack/kiosk.sh &
