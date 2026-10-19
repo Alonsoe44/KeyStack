@@ -5,6 +5,7 @@ import { ArrowLeft, ChevronsLeft, ChevronsRight, Pause, Play, RotateCcw } from "
 import type { LyricsDocument, Song } from "keystack-shared"
 
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { cn } from "@/lib/utils"
 import { ApiRequestError, loadLyrics, loadSong } from "../adapters/songstreamer-client"
 import { formatTime } from "../core/playback"
@@ -116,7 +117,7 @@ export function SongPlayerScreen({ id }: { id: string }) {
             <p className="song-player-artist">{song?.artist ?? " "}</p>
             <div className="song-lyrics" aria-label="Lyrics" role="region">
               {editingLyrics && song ? (
-                <div className="lyrics-editor-overlay">
+                <ScrollArea className="lyrics-editor-overlay" viewportClassName="lyrics-editor-overlay-content">
                   <LyricsEditor
                     song={song}
                     existing={lyrics}
@@ -127,7 +128,7 @@ export function SongPlayerScreen({ id }: { id: string }) {
                       player.setPlaybackRate(1)
                     }}
                   />
-                </div>
+                </ScrollArea>
               ) : lyrics ? (
                 <>
                   <KaraokeLyrics document={lyrics} />

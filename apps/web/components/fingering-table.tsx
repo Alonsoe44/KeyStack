@@ -1,6 +1,7 @@
 import { CircleHelp } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import {
   Popover,
   PopoverContent,
@@ -38,7 +39,7 @@ export function FingeringTable({ octaves }: FingeringTableProps) {
           </PopoverContent>
         </Popover>
       </div>
-      <div className="fingering-scroll overflow-x-auto">
+      <ScrollArea orientation="horizontal" className="fingering-scroll">
         <div className="inline-flex min-w-full flex-col gap-1">
           <Row label="Note">
             {notes.map((note) => (
@@ -60,7 +61,7 @@ export function FingeringTable({ octaves }: FingeringTableProps) {
             ))}
           </Row>
         </div>
-      </div>
+      </ScrollArea>
     </div>
   )
 }

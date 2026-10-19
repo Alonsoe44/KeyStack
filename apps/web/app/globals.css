@@ -269,7 +269,161 @@
 
 .site-main {
   min-height: 0;
-  overflow-y: auto;
+}
+
+/*
+ * Scrolling. Every scrolling region uses <ScrollArea> (components/ui/
+ * scroll-area.tsx): a thick, square, touch-draggable bar sized for the Pi's
+ * touch screen. The frame reserves a gutter for the bar only while the content
+ * overflows, so nothing sits underneath it.
+ */
+
+:root {
+  --scrollbar-size: 1.5rem;
+  --scrollbar-gutter: calc(var(--scrollbar-size) + 0.3rem);
+}
+
+.scroll-area {
+  position: relative;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+/* Sideways scrollers take the width they are given instead of stretching
+   their parents to fit the content (e.g. the practice piano in a grid). */
+.scroll-area:not([data-scroll-orientation="vertical"]) {
+  width: 100%;
+  contain: inline-size;
+}
+
+.scroll-area[data-has-overflow-y] {
+  padding-inline-end: var(--scrollbar-gutter);
+}
+
+.scroll-area[data-has-overflow-x] {
+  padding-bottom: var(--scrollbar-gutter);
+}
+
+.scroll-area-viewport {
+  width: 100%;
+  min-height: 0;
+  max-height: inherit;
+  flex: 1 1 auto;
+  overscroll-behavior: contain;
+}
+
+.scroll-area-viewport:focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: -3px;
+}
+
+.scroll-area-scrollbar {
+  z-index: 1;
+  display: flex;
+  padding: 3px;
+  background: var(--secondary);
+}
+
+.scroll-area-scrollbar[data-orientation="vertical"] {
+  width: var(--scrollbar-size);
+  border-inline-start: 2px solid var(--border);
+}
+
+.scroll-area-scrollbar[data-orientation="horizontal"] {
+  height: var(--scrollbar-size);
+  flex-direction: column;
+  border-top: 2px solid var(--border);
+}
+
+.scroll-area-thumb {
+  position: relative;
+  flex-shrink: 0;
+  background: var(--foreground);
+  cursor: grab;
+}
+
+.scroll-area-scrollbar[data-orientation="vertical"] .scroll-area-thumb {
+  width: 100%;
+}
+
+.scroll-area-scrollbar[data-orientation="horizontal"] .scroll-area-thumb {
+  height: 100%;
+}
+
+/* Grip lines, so the thumb reads as something to drag. */
+.scroll-area-thumb::after {
+  position: absolute;
+  inset: 50% auto auto 50%;
+  width: 55%;
+  height: 8px;
+  background: repeating-linear-gradient(
+    to bottom,
+    var(--background) 0 2px,
+    transparent 2px 3px
+  );
+  content: "";
+  opacity: 0.7;
+  transform: translate(-50%, -50%);
+}
+
+.scroll-area-scrollbar[data-orientation="horizontal"] .scroll-area-thumb::after {
+  width: 8px;
+  height: 55%;
+  background: repeating-linear-gradient(
+    to right,
+    var(--background) 0 2px,
+    transparent 2px 3px
+  );
+}
+
+.scroll-area-scrollbar:hover .scroll-area-thumb,
+.scroll-area-thumb[data-scrolling],
+.scroll-area-thumb:active {
+  background: var(--primary);
+}
+
+.scroll-area-thumb:active {
+  cursor: grabbing;
+}
+
+.scroll-area-corner {
+  background: var(--secondary);
+}
+
+/* Native fallback (textareas, anything not yet in a ScrollArea): same look. */
+
+::-webkit-scrollbar {
+  width: var(--scrollbar-size);
+  height: var(--scrollbar-size);
+}
+
+::-webkit-scrollbar-track {
+  background: var(--secondary);
+}
+
+::-webkit-scrollbar-thumb {
+  min-height: 2.75rem;
+  border: 3px solid var(--secondary);
+  background: var(--foreground);
+}
+
+::-webkit-scrollbar-thumb:hover,
+::-webkit-scrollbar-thumb:active {
+  background: var(--primary);
+}
+
+::-webkit-scrollbar-corner {
+  background: var(--secondary);
+}
+
+/* Firefox. Chromium skips this so its thick ::-webkit-scrollbar styles apply. */
+@supports not selector(::-webkit-scrollbar) {
+  html {
+    scrollbar-color: var(--foreground) var(--secondary);
+  }
 }
 
 .button-corners::before,
@@ -865,9 +1019,11 @@
   position: fixed;
   z-index: 50;
   inset: 0;
-  overflow: auto;
-  padding: clamp(0.8rem, 2vw, 1.5rem);
   background: var(--background);
+}
+
+.lyrics-editor-overlay-content {
+  padding: clamp(0.8rem, 2vw, 1.5rem);
 }
 
 .lyrics-editor {
@@ -1014,17 +1170,19 @@
 }
 
 .lyrics-text-preview {
-  display: flex;
   max-height: 8rem;
-  overflow: auto;
-  flex-direction: column;
-  gap: 0.18rem;
-  padding: 0.65rem;
   border: var(--line);
   background: var(--secondary);
   color: var(--foreground);
   font-size: 0.82rem;
   font-weight: 700;
+}
+
+.lyrics-text-preview-content {
+  display: flex;
+  flex-direction: column;
+  gap: 0.18rem;
+  padding: 0.65rem;
 }
 
 .lyrics-text-preview-large {
@@ -1054,10 +1212,11 @@
 }
 
 .lyrics-line-list {
-  display: flex;
-  min-height: 0;
   max-height: min(36vh, 14rem);
-  overflow: auto;
+}
+
+.lyrics-line-list-content {
+  display: flex;
   flex-direction: column;
   gap: 0.3rem;
   padding: 0.1rem;
@@ -1104,9 +1263,11 @@
 }
 
 .lyrics-word-line {
-  display: flex;
   max-height: 8rem;
-  overflow: auto;
+}
+
+.lyrics-word-line-content {
+  display: flex;
   flex-wrap: wrap;
   gap: 0.35rem;
   padding: 0.25rem;
@@ -1531,7 +1692,7 @@
   gap: 0.5rem;
 }
 
-.practice-piano-wrap {
+.practice-piano-scroll {
   padding: clamp(2rem, 6vw, 5rem) 0 1.2rem;
 }
 
@@ -1800,8 +1961,7 @@
     font-size: clamp(4rem, 19vw, 7rem);
   }
 
-  .practice-piano-wrap {
-    overflow-x: auto;
+  .practice-piano-scroll {
     padding-top: 2.2rem;
   }
 
@@ -2129,8 +2289,6 @@
 .source-results {
   min-height: 0;
   flex: 1;
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
 .source-search-note {

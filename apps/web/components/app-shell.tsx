@@ -6,6 +6,7 @@ import { usePathname, useRouter } from "next/navigation"
 import { Disc3, Download, LibraryBig, Music2, Settings } from "lucide-react"
 
 import { cn } from "@/lib/utils"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { useImportJob } from "@/app/modules/song-import/components/ImportJobProvider"
 import { useLyricsNavigationGuard } from "@/app/modules/song-player/components/LyricsNavigationGuard"
 
@@ -62,7 +63,9 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           )
         })}
       </nav>
-      <main className="site-main">{children}</main>
+      <ScrollArea render={<main />} role="main" className="site-main">
+        {children}
+      </ScrollArea>
     </div>
   )
 }

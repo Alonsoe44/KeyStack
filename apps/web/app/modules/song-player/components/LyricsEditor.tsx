@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, type ChangeEvent } f
 import type { LyricLine, LyricWord, LyricsDocument, LyricsSaveRequest, Song } from "keystack-shared"
 
 import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
 import { ApiRequestError, saveLyrics } from "../adapters/songstreamer-client"
 import { clamp } from "../core/playback"
 import { KaraokeLyrics } from "./KaraokeLyrics"
@@ -575,9 +576,9 @@ export function LyricsEditor({
                 <span>Lyrics text</span>
                 <textarea value={sourceText} onChange={(event) => { setSourceText(event.target.value); setTextError(null) }} placeholder="One line at a time…" rows={5} />
               </label>
-              <div className="lyrics-text-preview" aria-label="Lyrics preview">
+              <ScrollArea className="lyrics-text-preview" viewportClassName="lyrics-text-preview-content" viewportProps={{ "aria-label": "Lyrics preview" }}>
                 {sourceText.trim() ? sourceText.split(/\r?\n/).filter((line) => line.trim()).map((line, index) => <span key={`${index}-${line}`}>{line}</span>) : <span className="lyrics-muted">Your pasted lines will preview here.</span>}
-              </div>
+              </ScrollArea>
             </>
           )}
           <div className="lyrics-editor-fields">
@@ -593,9 +594,9 @@ export function LyricsEditor({
       {phase === "text-preview" && (
         <>
           <p className="lyrics-editor-instruction">Check the line breaks and words before timing. You can return to the source to make a change.</p>
-          <div className="lyrics-text-preview lyrics-text-preview-large" aria-label="Text preview">
+          <ScrollArea className="lyrics-text-preview lyrics-text-preview-large" viewportClassName="lyrics-text-preview-content" viewportProps={{ "aria-label": "Text preview" }}>
             {draft.lines.map((line) => <span key={line.id}>{line.text}</span>)}
-          </div>
+          </ScrollArea>
           <div className="lyrics-editor-footer">
             <Button type="button" variant="outline" onClick={() => setPhase("source")}>Edit text</Button>
             <Button type="button" variant="outline" onClick={undo} disabled={past.length === 0}>Undo</Button>
@@ -616,9 +617,9 @@ export function LyricsEditor({
             <Button type="button" variant="outline" onClick={replayLine}>{looping ? "Stop looping" : "Replay line"}</Button>
             <label className="lyrics-speed">Speed <select value={player.playbackRate} onChange={(event) => player.setPlaybackRate(Number(event.target.value))}><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1">1×</option><option value="1.25">1.25×</option></select></label>
           </div>
-          <div className="lyrics-line-list" role="list">
+          <ScrollArea className="lyrics-line-list" viewportClassName="lyrics-line-list-content" viewportProps={{ role: "list" }}>
             {draft.lines.map((line, index) => <button type="button" role="listitem" key={line.id} className={`lyrics-timing-line${index === selectedLine ? " selected" : ""}${line.startMs !== null ? " timed" : ""}`} onClick={() => setSelectedLine(index)}><span>{line.text}</span><small>{formatStamp(line.startMs)}</small></button>)}
-          </div>
+          </ScrollArea>
           <div className="lyrics-current-actions">
             <Button type="button" variant="outline" onClick={() => adjustLineStart(-TIMESTAMP_STEP_MS)} disabled={draft.lines[selectedLine]?.startMs === null}>Earlier</Button>
             <Button type="button" variant="outline" onClick={() => adjustLineStart(TIMESTAMP_STEP_MS)} disabled={draft.lines[selectedLine]?.startMs === null}>Later</Button>
@@ -640,9 +641,9 @@ export function LyricsEditor({
             <Button type="button" variant="outline" onClick={replayLine}>{looping ? "Stop looping" : "Replay line"}</Button>
             <label className="lyrics-speed">Speed <select value={player.playbackRate} onChange={(event) => player.setPlaybackRate(Number(event.target.value))}><option value="0.5">0.5×</option><option value="0.75">0.75×</option><option value="1">1×</option><option value="1.25">1.25×</option></select></label>
           </div>
-          <div className="lyrics-word-line" aria-label={`Timing line ${selectedLine + 1}`}>
+          <ScrollArea className="lyrics-word-line" viewportClassName="lyrics-word-line-content" viewportProps={{ "aria-label": `Timing line ${selectedLine + 1}` }}>
             {draft.lines[selectedLine]?.words.map((word, index) => <button type="button" key={word.id} className={`lyrics-word-button${index === selectedWord ? " selected" : ""}${word.startMs !== null ? " timed" : ""}`} onClick={() => setSelectedWord(index)}><span>{word.text}</span><small>{formatStamp(word.startMs)}</small></button>)}
-          </div>
+          </ScrollArea>
           <p className="lyrics-active-line">{draft.lines[selectedLine]?.text}</p>
           <div className="lyrics-current-actions">
             <Button type="button" variant="outline" onClick={() => adjustWord(-TIMESTAMP_STEP_MS)} disabled={draft.lines[selectedLine]?.words[selectedWord]?.startMs === null}>Earlier</Button>
