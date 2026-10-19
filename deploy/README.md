@@ -263,6 +263,20 @@ deploy used `PI_HOST=emilianopolanco5@pekepi.local`; the `pi` SSH alias still
 pointed at the old address `192.168.1.140`. Looking up lyrics on the Pi, which
 needs the Pi to reach lrclib.net, is for the user to accept.
 
+On 2026-10-19 (~21:58) the Wi-Fi hotspot panel (commit `50c252f`) went out
+with a full `pi:deploy`, because Settings needs the new local server routes
+(`/api/v1/network`, `/nearby`, `/hotspot`, `/hotspot/connect`): both the
+frontend export and the server bundle were replaced, built from a clean tree
+at that commit. The previous export and bundle are in
+`~/keystack/releases/wifi-20261019/` (`out.previous`, `index.cjs.previous`);
+roll back the same way as the LRCLIB release. Before deploying, `nmcli` was
+confirmed present at `/usr/bin/nmcli` with NetworkManager running. After the
+restart the server re-created the keyboard → synth route, and
+`keystack-server`, `fluidsynth` and `keystack-kiosk` reported active. Whether
+the desktop user may change Wi-Fi without the polkit rule in
+[Wi-Fi hotspot](#wi-fi-hotspot-networkmanager-access), and connecting to the
+iPhone hotspot, are for the user to accept on the Pi.
+
 ## The kiosk
 
 `~/keystack/kiosk.sh [url]` (source: `deploy/kiosk/kiosk.sh`) shows a URL
