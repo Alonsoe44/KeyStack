@@ -196,7 +196,7 @@ the user's responsibility.
 On 2026-10-19 (~19:36) the YouTube search release followed the same pattern:
 SongStreamer `0.3.0` adds `GET /api/v1/import/search` (record in the sibling
 `SongStreamer/docs/deployment-results.md`), and the client Pi received only the
-frontend export from KeyStack commit `28b43ec`, which adds the Import screen's
+frontend export from KeyStack commit `8310bb7`, which adds the Import screen's
 **Find on YouTube** panel. The previous export is at
 `~/keystack/releases/search-20261019/out.previous`; to roll back, swap it back
 into `~/keystack/out` and run `keystack/kiosk.sh`. `keystack-server`,
@@ -204,7 +204,7 @@ into `~/keystack/out` and run `keystack/kiosk.sh`. `keystack-server`,
 UI, playback, and hardware acceptance remain the user's responsibility.
 That first export accidentally included uncommitted song-player edits from the
 working tree, so it was replaced the same evening with a rebuild of exactly
-commit `6f84046` (search included, no uncommitted code). The replaced export
+commit `a5a49b3` (search included, no uncommitted code). The replaced export
 is kept at `~/keystack/releases/search-20261019/out.replaced`; the pre-search
 rollback remains `out.previous`.
 
