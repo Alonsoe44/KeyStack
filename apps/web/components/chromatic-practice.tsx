@@ -3,7 +3,6 @@
 import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { CountdownTimer } from "@/components/countdown-timer"
 import { FingeringTable } from "@/components/fingering-table"
 import { Metronome } from "@/components/metronome"
@@ -41,11 +40,11 @@ export function ChromaticPractice() {
           </div>
         </div>
 
-        <ScrollArea orientation="horizontal" className="practice-piano-wrap" viewportClassName="practice-piano-scroll">
+        <div className="practice-piano-wrap">
           <div className="practice-piano">
             <Piano octaves={octaves} />
           </div>
-        </ScrollArea>
+        </div>
         <div className="practice-fingering">
           <FingeringTable octaves={octaves} />
         </div>

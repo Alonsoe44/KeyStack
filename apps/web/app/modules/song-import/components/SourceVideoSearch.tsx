@@ -5,7 +5,6 @@ import type { SourceVideo } from "keystack-shared"
 import { ArrowLeft, Check, LoaderCircle, Search, X } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
-import { ScrollArea } from "@/components/ui/scroll-area"
 import { searchSourceVideos } from "../adapters/songstreamer-import-client"
 import { SourceVideoPreview } from "./SourceVideoPreview"
 
@@ -145,7 +144,7 @@ export function SourceVideoSearch({
           </div>
         </div>
       ) : (
-        <ScrollArea className="source-results" viewportProps={{ "aria-live": "polite", "aria-busy": state.kind === "loading" }}>
+        <div className="source-results" aria-live="polite" aria-busy={state.kind === "loading"}>
           {state.kind === "idle" && <p className="source-search-note">Search YouTube, tap a result to preview it, then use it.</p>}
           {state.kind === "loading" && <p className="source-search-note">Searching YouTube…</p>}
           {state.kind === "error" && <p className="status-error" role="alert">{state.message}</p>}
@@ -174,7 +173,7 @@ export function SourceVideoSearch({
               ))}
             </ul>
           )}
-        </ScrollArea>
+        </div>
       )}
     </div>
   )
