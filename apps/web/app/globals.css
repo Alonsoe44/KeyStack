@@ -2856,8 +2856,12 @@ html.osk-open .wifi-modal-backdrop {
   font-weight: 800;
 }
 
-/* The keyboard can leave ~250px on the 800x480 screen: scroll, don't clip. */
+/* The keyboard can leave ~250px on the 800x480 screen: scroll, don't clip.
+   minmax(0, 1fr) stops the chip row's full width from widening the grid
+   column past the screen, which scrolled the whole backdrop sideways. */
 .wifi-modal-backdrop {
+  grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
   overflow-y: auto;
 }
 
@@ -2897,11 +2901,17 @@ html.osk-open .wifi-modal-hint {
   flex: 1;
 }
 
+/* Swiped sideways on the touch screen; the thick scrollbar would only add a
+   second bar, and the cut-off last chip already shows there is more. */
 .wifi-nearby {
   display: flex;
   gap: 0.4rem;
   overflow-x: auto;
-  padding-bottom: 0.2rem;
+  scrollbar-width: none;
+}
+
+.wifi-nearby::-webkit-scrollbar {
+  display: none;
 }
 
 .wifi-chip {
