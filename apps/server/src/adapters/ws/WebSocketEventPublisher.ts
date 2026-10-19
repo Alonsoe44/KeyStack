@@ -7,11 +7,11 @@ import type { LoggerPort } from "../../ports/LoggerPort"
 export class WebSocketEventPublisher implements EventPublisherPort {
   private readonly wss: WebSocketServer
 
-  /** `snapshot` is sent to every client as soon as it connects. */
+  /** `snapshot` events are sent to every client as soon as it connects. */
   constructor(
     server: Server,
     path: string,
-    snapshot: () => KeyStackEvent,
+    snapshot: () => KeyStackEvent[],
     logger: LoggerPort
   ) {
     this.wss = new WebSocketServer({ server, path })
@@ -19,7 +19,7 @@ export class WebSocketEventPublisher implements EventPublisherPort {
       socket.on("error", (err) =>
         logger.warn(`WebSocket client error: ${err.message}`)
       )
-      socket.send(JSON.stringify(snapshot()))
+      for (const event of snapshot()) socket.send(JSON.stringify(event))
     })
   }
 

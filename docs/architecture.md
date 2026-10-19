@@ -175,7 +175,8 @@ apps/
   server/     Node + TypeScript + Express + ws (bundled to dist/index.cjs)
   web/        Next.js static export — the kiosk UI
 packages/
-  shared/     Types shared by server and web: DTOs and pushed events
+  shared/           Types shared by server and web: DTOs and pushed events
+  launchkey-input/  Launchkey Mini MK4 buttons, pads and knobs as named events
 deploy/       systemd user units, labwc kiosk autostart, provision/sync scripts
 ```
 
@@ -196,7 +197,12 @@ type KeyStackEvent =
   | { type: "midi.keyboard.disconnected" }
   | { type: "midi.route.established" }
   | { type: "midi.route.failed"; reason: string }
+  | { type: "controller.control"; control: ControllerControlEvent }
+  | { type: "controller.status"; status: ControllerStatus }
 ```
+
+The controller types are in `packages/shared/src/controller.ts` (see
+[Launchkey controls](#launchkey-controls)).
 
 ## Backend (`apps/server`)
 
@@ -218,6 +224,7 @@ src/
     alsa/parseAconnectList.ts          pure parser for `aconnect -l`
     system/SystemctlPowerAdapter.ts    SystemPowerPort via `systemctl poweroff`
     ws/WebSocketEventPublisher.ts      EventPublisherPort, broadcasts to clients
+    launchkey/LaunchkeyForwarder.ts    launchkey-input events → /ws
     http/statusRoutes.ts               GET /api/status, /api/health
     http/systemRoutes.ts               POST /api/system/poweroff
     http/lyricsRoutes.ts               GET /api/v1/lyrics/lookup, /search
@@ -278,7 +285,7 @@ frontend from `STATIC_DIR`.
 | `POST /api/instruments/volume` | `{ volume: 0-100 }`. Sets FluidSynth's master gain (100 = gain 0.8; the default 63 matches the unit's `-g 0.5`). Same errors as above |
 | `GET /api/v1/lyrics/lookup?title=&artist=&album=&duration=` | `{ match: LyricsCandidate \| null }`: LRCLIB's record for this exact recording. `album` and `duration` (seconds) are optional |
 | `GET /api/v1/lyrics/search?q=` | `{ results: LyricsCandidate[] }`, at most 20, plain text only |
-| WebSocket `/ws` | Sends a `midi.status` snapshot on connect, then broadcasts every `KeyStackEvent` as JSON |
+| WebSocket `/ws` | Sends `midi.status` and `controller.status` snapshots on connect, then broadcasts every `KeyStackEvent` as JSON |
 
 The lyrics routes answer `400 INVALID_REQUEST` for missing or over-long
 fields, `504 LYRICS_SOURCE_TIMEOUT` when LRCLIB takes longer than
@@ -322,6 +329,45 @@ FluidSynth forgets both settings when it restarts. The server watches the
 it re-applies the selected voice and volume. The selection lives in memory:
 a server restart goes back to the piano at volume 63 (and re-applies that).
 
+### Launchkey controls
+
+The Launchkey's buttons, pads and knobs drive the UI through the
+`packages/launchkey-input` library (its README has the API and the MIDI
+map). The keys are unaffected: they keep going to FluidSynth through the
+reconciler's route.
+
+- The controller has two USB MIDI interfaces. The keys use the first (the
+  sequencer port the reconciler routes). The buttons, pads and knobs are
+  read from the second, the **DAW port**, which the ALSA sequencer does not
+  list, so the library reaches it as raw MIDI with `amidi` (alsa-utils).
+- On connect the library sends `9F 0C 7F` (DAW mode) and `B6 45 7F`
+  (relative knobs). In DAW mode the pads stop playing notes and become
+  plain controls.
+- It looks for the port every 2 s, reconnects after an unplug and emits a
+  status on every change. On shutdown it sends `9F 0C 00`, which puts the
+  controller back in standalone mode; the systemd unit's `KillMode=mixed`
+  keeps `amidi` alive long enough for that.
+- `LaunchkeyForwarder` publishes every control as a `controller.control`
+  event and every status change as `controller.status`. The server gives
+  the controls no meaning: each React screen decides what `select` or
+  `knob-1` does there.
+
+```ts
+type ControllerControlEvent =
+  | { type: "button"; name: "play" | "record" | "previous" | "next" | "up" | "down" | "select" | "back"; pressed: boolean; time: number }
+  | { type: "pad"; name: "pad-1" … "pad-16"; pressed: boolean; velocity: number; time: number }
+  | { type: "knob"; name: "knob-1" … "knob-8"; delta: number; time: number }
+
+type ControllerStatus =
+  | { state: "connected"; port: string }   // e.g. "hw:1,0,1"
+  | { state: "disconnected" }
+  | { state: "error"; message: string }    // e.g. amidi missing; retried
+  | { state: "disabled" }                  // LAUNCHKEY_INPUT_ENABLED=false
+```
+
+`time` is milliseconds since the epoch. Shift, the Arp/Scale/Settings/Octave
+buttons and pad pressure are not reported.
+
 ### Configuration
 
 Environment variables, validated at startup — the server exits with a clear
@@ -339,6 +385,7 @@ message on an invalid value.
 | `SYNTH_SHELL_PORT` | `9800` | FluidSynth's command shell, used to switch voices and volume |
 | `LRCLIB_BASE_URL` | `https://lrclib.net` | Lyrics source for the editor's Find tab |
 | `LRCLIB_TIMEOUT_MS` | `8000` | Timeout per LRCLIB request |
+| `LAUNCHKEY_INPUT_ENABLED` | `true` | `false` stops the server from reading the Launchkey's buttons, pads and knobs |
 | `CORS_ORIGIN` | unset | `Access-Control-Allow-Origin` for `/api`; only needed in dev, where `next dev` is a different origin |
 
 To use a different keyboard, set `KEYBOARD_CLIENT_PREFIX` and
@@ -404,7 +451,7 @@ browser.
 
 ## Testing
 
-`npm test` runs the server's Vitest suite, none of which touches ALSA:
+`npm test` runs every workspace's Vitest suite, none of which touches ALSA:
 
 - **Parser** — real `aconnect -l` output from the device (unrouted and
   routed fixtures), plus empty output, unknown lines, connection suffixes
@@ -418,6 +465,11 @@ browser.
   stubbed `fetch` (query, User-Agent, 404 as no match, malformed records,
   timeouts and errors), and the routes' validation and error mapping. The
   fixtures use invented lyrics only.
+- **Launchkey input** (`packages/launchkey-input`) — five `amidi` captures
+  taken on the client Pi replayed through the decoder, the connection
+  lifecycle against an in-memory `FakeTransport`, and `AmidiTransport`
+  against a fake `amidi` script. The core is also type-checked without
+  Node's types, so it stays usable in a browser.
 
 ## Not built yet
 

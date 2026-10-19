@@ -14,6 +14,8 @@ export type Config = {
   /** LRCLIB, the source the lyrics editor's "Find lyrics" tab searches. */
   lrclibBaseUrl: string
   lrclibTimeoutMs: number
+  /** Launchkey buttons, pads and knobs forwarded over /ws (launchkey-input). */
+  launchkeyInputEnabled: boolean
 }
 
 type Env = Record<string, string | undefined>
@@ -43,6 +45,14 @@ function nonEmpty(env: Env, name: string, fallback: string): string {
     throw new Error(`Invalid ${name}: must not be empty`)
   }
   return raw
+}
+
+function boolean(env: Env, name: string, fallback: boolean): boolean {
+  const raw = env[name]
+  if (raw === undefined || raw === "") return fallback
+  if (raw === "true") return true
+  if (raw === "false") return false
+  throw new Error(`Invalid ${name}="${raw}": expected true or false`)
 }
 
 function httpUrl(env: Env, name: string, fallback: string): string {
@@ -75,5 +85,6 @@ export function loadConfig(env: Env = process.env): Config {
     synthShellPort: integer(env, "SYNTH_SHELL_PORT", 9800, 1, 65535),
     lrclibBaseUrl: httpUrl(env, "LRCLIB_BASE_URL", "https://lrclib.net"),
     lrclibTimeoutMs: integer(env, "LRCLIB_TIMEOUT_MS", 8000, 500, 60_000),
+    launchkeyInputEnabled: boolean(env, "LAUNCHKEY_INPUT_ENABLED", true),
   }
 }

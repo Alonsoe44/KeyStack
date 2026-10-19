@@ -1,4 +1,5 @@
 export type * from "./midi"
+export type * from "./controller"
 export type * from "./songs"
 export type * from "./imports"
 export type * from "./lyrics"

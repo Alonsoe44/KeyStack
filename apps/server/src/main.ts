@@ -2,6 +2,7 @@ import { createServer } from "node:http"
 import path from "node:path"
 import express from "express"
 import type { KeyStackEvent } from "keystack-shared"
+import { createLaunchkeyInput } from "launchkey-input"
 import { AconnectSequencerAdapter } from "./adapters/alsa/AconnectSequencerAdapter"
 import { FluidSynthShellAdapter } from "./adapters/fluidsynth/FluidSynthShellAdapter"
 import { instrumentRoutes } from "./adapters/http/instrumentRoutes"
@@ -9,6 +10,7 @@ import { lyricsRoutes } from "./adapters/http/lyricsRoutes"
 import { networkRoutes } from "./adapters/http/networkRoutes"
 import { statusRoutes } from "./adapters/http/statusRoutes"
 import { systemRoutes } from "./adapters/http/systemRoutes"
+import { LaunchkeyForwarder } from "./adapters/launchkey/LaunchkeyForwarder"
 import { LrclibAdapter } from "./adapters/lrclib/LrclibAdapter"
 import { NmcliNetworkAdapter } from "./adapters/networkmanager/NmcliNetworkAdapter"
 import { SystemctlPowerAdapter } from "./adapters/system/SystemctlPowerAdapter"
@@ -31,15 +33,20 @@ function main(): void {
   const app = express()
   const server = createServer(app)
 
-  // The publisher needs the reconciler's status and the reconciler needs the
-  // publisher; the snapshot callback is only invoked once both exist.
+  // The publisher needs the reconciler's and the forwarder's status and they
+  // need the publisher; the snapshot callback only runs once all exist.
   const publisher = new WebSocketEventPublisher(
     server,
     "/ws",
-    (): KeyStackEvent => ({
-      type: "midi.status",
-      status: reconciler.getStatus(),
-    }),
+    (): KeyStackEvent[] => [
+      { type: "midi.status", status: reconciler.getStatus() },
+      launchkey.snapshot(),
+    ],
+    logger
+  )
+  const launchkey = new LaunchkeyForwarder(
+    config.launchkeyInputEnabled ? createLaunchkeyInput() : null,
+    publisher,
     logger
   )
   const instruments = new InstrumentService(
@@ -118,15 +125,19 @@ function main(): void {
         `poll ${config.pollIntervalMs}ms`
     )
     reconciler.start()
+    void launchkey.start()
   })
 
   // The route itself lives in the kernel, so shutting down never stops sound.
   const shutdown = (signal: string) => {
     logger.info(`${signal} received, shutting down`)
     reconciler.stop()
-    publisher.close()
-    server.close(() => process.exit(0))
     setTimeout(() => process.exit(0), 2000).unref()
+    // Put the Launchkey back in standalone mode before exiting.
+    void launchkey.stop().finally(() => {
+      publisher.close()
+      server.close(() => process.exit(0))
+    })
   }
   process.on("SIGTERM", () => shutdown("SIGTERM"))
   process.on("SIGINT", () => shutdown("SIGINT"))

@@ -1,0 +1,20 @@
+{
+  "name": "launchkey-input",
+  "version": "0.1.0",
+  "description": "Novation Launchkey Mini MK4 buttons, pads and knobs as named input events",
+  "type": "module",
+  "private": true,
+  "exports": {
+    ".": "./src/index.ts",
+    "./core": "./src/core.ts"
+  },
+  "scripts": {
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.core.json && tsc --noEmit -p tsconfig.json"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "typescript": "^5",
+    "vitest": "^3.0.0"
+  }
+}

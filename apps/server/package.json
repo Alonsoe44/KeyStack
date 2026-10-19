@@ -13,6 +13,7 @@
   "dependencies": {
     "express": "^5.1.0",
     "keystack-shared": "*",
+    "launchkey-input": "*",
     "ws": "^8.18.0"
   },
   "devDependencies": {

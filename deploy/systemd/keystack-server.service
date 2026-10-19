@@ -14,6 +14,10 @@ Environment=STATIC_DIR=%h/keystack/out
 ExecStart=%h/keystack/node/bin/node %h/keystack/server/index.cjs
 Restart=always
 RestartSec=2
+# SIGTERM only the server, not its amidi child: on shutdown the server
+# still needs the Launchkey's port to take it out of DAW mode. Anything
+# left after the stop timeout is SIGKILLed.
+KillMode=mixed
 
 [Install]
 WantedBy=default.target

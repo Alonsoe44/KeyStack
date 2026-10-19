@@ -1,0 +1,3 @@
+Dir Device    Name
+IO  hw:1,0,0  Launchkey Mini MK4 37 MIDI Out
+IO  hw:1,0,1  Launchkey Mini MK4 37 DAW Out
