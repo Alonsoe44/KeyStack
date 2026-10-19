@@ -6,9 +6,11 @@ import { AconnectSequencerAdapter } from "./adapters/alsa/AconnectSequencerAdapt
 import { FluidSynthShellAdapter } from "./adapters/fluidsynth/FluidSynthShellAdapter"
 import { instrumentRoutes } from "./adapters/http/instrumentRoutes"
 import { lyricsRoutes } from "./adapters/http/lyricsRoutes"
+import { networkRoutes } from "./adapters/http/networkRoutes"
 import { statusRoutes } from "./adapters/http/statusRoutes"
 import { systemRoutes } from "./adapters/http/systemRoutes"
 import { LrclibAdapter } from "./adapters/lrclib/LrclibAdapter"
+import { NmcliNetworkAdapter } from "./adapters/networkmanager/NmcliNetworkAdapter"
 import { SystemctlPowerAdapter } from "./adapters/system/SystemctlPowerAdapter"
 import { WebSocketEventPublisher } from "./adapters/ws/WebSocketEventPublisher"
 import { type Config, loadConfig } from "./config"
@@ -94,6 +96,7 @@ function main(): void {
       logger
     )
   )
+  app.use("/api/v1", networkRoutes(new NmcliNetworkAdapter(), logger))
   // The static export has both scales.html and a scales/ directory, so
   // /scales has to be mapped to the .html file before express.static sees it.
   app.get(/.*/, (req, res, next) => {

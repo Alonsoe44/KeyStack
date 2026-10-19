@@ -3,6 +3,7 @@ export type * from "./songs"
 export type * from "./imports"
 export type * from "./lyrics"
 export type * from "./lyrics-lookup"
+export type * from "./network"
 
 export interface HealthResponse {
   ok: true

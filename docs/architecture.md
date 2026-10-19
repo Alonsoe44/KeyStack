@@ -85,7 +85,8 @@ flowchart TB
   end
 
   voices -- "GET /api/instruments<br/>POST /api/instruments/select" --> api
-  settings -- "GET /api/status<br/>POST /api/system/poweroff" --> api
+  settings -- "GET /api/status<br/>POST /api/system/poweroff<br/>GET /api/v1/network, /network/nearby<br/>PUT /api/v1/network/hotspot<br/>POST /api/v1/network/hotspot/connect" --> api
+  api -- "nmcli" --> nm["NetworkManager<br/>(Wi-Fi)"]
   songs -- "GET /api/v1/lyrics/lookup<br/>GET /api/v1/lyrics/search" --> api
   api -- "plain lyrics<br/>(HTTPS)" --> lrclib["LRCLIB<br/>lrclib.net"]
   ws -- "midi.status snapshots" --> settings
@@ -97,6 +98,20 @@ flowchart TB
   reconcile -- "aconnect: keyboard → synth" --> alsa
   reconcile -- "status changes" --> ws
 ```
+
+### Wi-Fi hotspot fallback
+
+Settings has a Wi-Fi panel for when the Pi is away from home. The local server
+manages exactly one NetworkManager profile, `keystack-hotspot` (for example an
+iPhone's Personal Hotspot), through `nmcli` behind `NetworkPort`; every other
+saved network is left alone. The profile autoconnects with priority `-10`,
+below the default `0`, so the home network wins whenever both are in range and
+the hotspot is joined on its own when home is gone. **Connect to hotspot**
+forces the switch (an iPhone only broadcasts while its Personal Hotspot screen
+is open, so the server rescans first and answers `NETWORK_NOT_FOUND` within
+seconds). The password is write-only: `PUT /api/v1/network/hotspot` stores it
+in NetworkManager and no response returns it. Only one change runs at a time;
+a second one gets `409 BUSY`.
 
 Three processes, each replaceable without the others. FluidSynth and the
 server are systemd **user** units (`systemctl --user`), so nothing on the Pi

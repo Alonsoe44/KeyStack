@@ -73,6 +73,32 @@ sudo apt-get install -y fluidsynth fluid-soundfont-gm alsa-utils chromium \
 without real-time priority, which is why the buffer is set to 256 frames
 (see [Audio latency](#audio-latency)).
 
+### Wi-Fi hotspot (NetworkManager access)
+
+The Settings Wi-Fi panel runs `nmcli` as the desktop user, from
+`keystack-server.service`. Raspberry Pi OS lets the logged-in desktop user
+change Wi-Fi without sudo (the same way the taskbar's network menu does), so
+no extra setup is expected. If the panel reports *Not authorized to control
+networking*, this is the one host step, run on the Pi:
+
+```bash
+sudo tee /etc/polkit-1/rules.d/50-keystack-network.rules >/dev/null <<'RULE'
+polkit.addRule(function (action, subject) {
+  if (action.id.indexOf("org.freedesktop.NetworkManager.") === 0 && subject.isInGroup("netdev")) {
+    return polkit.Result.YES;
+  }
+});
+RULE
+sudo usermod -aG netdev "$USER"   # then reboot
+```
+
+The hotspot is saved as the profile `keystack-hotspot` (inspect it with
+`nmcli connection show keystack-hotspot`; remove it with
+`nmcli connection delete keystack-hotspot`). Its password is stored by
+NetworkManager in `/etc/NetworkManager/system-connections/`, readable only by
+root. While it is being saved, the password is briefly visible in the `nmcli`
+process arguments to local users of the Pi.
+
 ## Audio
 
 PipeWire is the only process that opens the DAC. FluidSynth (`-a pipewire`)

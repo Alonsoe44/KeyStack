@@ -1,4 +1,5 @@
 import { MidiStatusPanel } from "@/app/modules/midi-connection/components/MidiStatusPanel"
+import { WifiPanel } from "@/app/modules/network/components/WifiPanel"
 import { PowerOffButton } from "@/app/modules/system-power/components/PowerOffButton"
 
 export default function Page() {
@@ -10,6 +11,8 @@ export default function Page() {
       </section>
 
       <MidiStatusPanel />
+
+      <WifiPanel />
 
       <section className="settings-banner" aria-labelledby="settings-banner-title">
         <span className="eyebrow eyebrow-on-blue">RASPBERRY PI PIANO / 01</span>

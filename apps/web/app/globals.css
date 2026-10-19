@@ -1064,6 +1064,7 @@
 
 .lyrics-field textarea,
 .lyrics-field input,
+.wifi-field input,
 .lyrics-speed select {
   min-height: 2.2rem;
   padding: 0.45rem 0.55rem;
@@ -1290,7 +1291,8 @@
   margin: 0;
 }
 
-.lyrics-modal-backdrop {
+.lyrics-modal-backdrop,
+.wifi-modal-backdrop {
   position: fixed;
   z-index: 60;
   inset: 0;
@@ -2404,7 +2406,8 @@ html.osk-open .keystack-app {
 }
 
 html.osk-open .source-search,
-html.osk-open .lyrics-modal-backdrop {
+html.osk-open .lyrics-modal-backdrop,
+html.osk-open .wifi-modal-backdrop {
   bottom: var(--osk-height, 0px);
 }
 
@@ -2826,4 +2829,111 @@ html.osk-open .lyrics-modal-backdrop {
   .player-bar {
     padding-top: 0.8rem;
   }
+}
+
+/* Wi-Fi panel and hotspot modal (settings). */
+
+.wifi-status-list {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 560px) {
+  .wifi-status-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+.wifi-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 1.2rem;
+}
+
+.wifi-success {
+  margin: 1.2rem 0 0;
+  font-size: 0.8rem;
+  font-weight: 800;
+}
+
+/* The keyboard can leave ~250px on the 800x480 screen: scroll, don't clip. */
+.wifi-modal-backdrop {
+  overflow-y: auto;
+}
+
+html.osk-open .wifi-modal-backdrop {
+  place-items: start center;
+}
+
+html.osk-open .wifi-modal-hint {
+  display: none;
+}
+
+.wifi-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono-local);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.wifi-field input {
+  min-width: 0;
+  min-height: 2.75rem;
+  text-transform: none;
+  letter-spacing: normal;
+}
+
+.wifi-password {
+  display: flex;
+  gap: 0.45rem;
+}
+
+.wifi-password input {
+  flex: 1;
+}
+
+.wifi-nearby {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  padding-bottom: 0.2rem;
+}
+
+.wifi-chip {
+  flex: none;
+  min-height: 2.5rem;
+  padding: 0 0.75rem;
+  border: 2px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  font-size: 0.85rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.wifi-chip-selected {
+  background: var(--accent);
+}
+
+.wifi-nearby-note {
+  color: var(--muted-foreground);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.lyrics-modal .wifi-progress {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  color: var(--foreground);
+}
+
+.lyrics-modal .wifi-error {
+  margin: 0;
+  color: var(--destructive);
 }
