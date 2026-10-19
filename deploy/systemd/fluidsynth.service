@@ -1,10 +1,25 @@
 # systemd *user* unit (~/.config/systemd/user/) — no root needed.
 [Unit]
 Description=FluidSynth engine
+# PipeWire owns the DAC and mixes FluidSynth with the kiosk's browser audio
+# (the song player). FluidSynth is one of its clients, so it starts after
+# PipeWire and WirePlumber (which creates the DAC sink and links the stream).
+Requires=pipewire.service
+Wants=wireplumber.service
+After=pipewire.service wireplumber.service
+# Never give up restarting. If FluidSynth can't bind its shell port (e.g. a
+# connection to it is still in TIME_WAIT) it exits; a later retry succeeds.
+StartLimitIntervalSec=0
 
 [Service]
-ExecStart=/usr/bin/fluidsynth -is -a alsa -m alsa_seq \
-  -o audio.alsa.device=hw:BossDAC,0 -o audio.period-size=64 -o audio.periods=2 \
+# 48 kHz matches PipeWire's clock, so nothing is resampled. The period
+# becomes the stream's node.latency, which sets the whole graph's quantum
+# while FluidSynth runs. 256 frames (~5.3 ms) is the smallest that ran
+# without xruns next to Chromium while PipeWire has no real-time priority
+# (64 xruns even when idle, 128 xruns during playback). With RTKit
+# installed, try 128 or 64 — see deploy/README.md, "Audio latency".
+ExecStart=/usr/bin/fluidsynth -is -a pipewire -m alsa_seq -r 48000 \
+  -o audio.period-size=256 -o audio.pipewire.media-role=Music \
   -o shell.port=9800 -g 0.5 /usr/share/sounds/sf2/FluidR3_GM.sf2
 Restart=always
 RestartSec=2

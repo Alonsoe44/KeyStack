@@ -317,7 +317,7 @@ if command -v systemctl >/dev/null 2>&1; then
   systemctl daemon-reload || printf 'WARNING: systemd daemon-reload failed; reload it before starting the future cloud service.\n' >&2
 fi
 
-for data_directory in sqlite mp3 backups; do
+for data_directory in sqlite audio backups; do
   data_path="$MOUNT_POINT/$data_directory"
   mkdir -p -- "$data_path"
   chown "$OWNER_UID:$OWNER_GID" "$data_path"
@@ -342,7 +342,7 @@ printf '\nStorage preparation complete.\n'
 printf '  disk: %s (serial %s)\n' "$TARGET_REAL" "$EXPECTED_SERIAL"
 printf '  filesystem: ext4 label %s UUID %s\n' "$FILESYSTEM_LABEL" "$FILESYSTEM_UUID"
 printf '  mount: %s (persistent fstab entry)\n' "$MOUNT_POINT"
-printf '  directories: sqlite, mp3, backups owned by %s (%s:%s), mode 0750\n' "$OWNER_NAME" "$OWNER_UID" "$OWNER_GID"
+printf '  directories: sqlite, audio, backups owned by %s (%s:%s), mode 0750\n' "$OWNER_NAME" "$OWNER_UID" "$OWNER_GID"
 printf '  fstab backup: %s\n' "$FSTAB_BACKUP"
 printf '  no SQLite database or schema was created.\n'
 printf '  service guard: the future cloud service must require %s with RequiresMountsFor= before starting, so it cannot fall back to the SD card.\n' "$MOUNT_POINT"

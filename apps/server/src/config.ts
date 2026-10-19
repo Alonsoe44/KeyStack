@@ -9,6 +9,8 @@ export type Config = {
   synthClientPrefix: string
   pollIntervalMs: number
   aconnectTimeoutMs: number
+  /** FluidSynth's command shell (`-o shell.port=`), used to switch voices. */
+  synthShellPort: number
 }
 
 type Env = Record<string, string | undefined>
@@ -53,5 +55,6 @@ export function loadConfig(env: Env = process.env): Config {
     synthClientPrefix: nonEmpty(env, "SYNTH_CLIENT_PREFIX", "FLUID Synth"),
     pollIntervalMs: integer(env, "POLL_INTERVAL_MS", 500, 50, 60_000),
     aconnectTimeoutMs: integer(env, "ACONNECT_TIMEOUT_MS", 2000, 100, 60_000),
+    synthShellPort: integer(env, "SYNTH_SHELL_PORT", 9800, 1, 65535),
   }
 }

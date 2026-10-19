@@ -1,6 +1,6 @@
 # Frontend integration guide
 
-This document specifies a small, framework-agnostic browser client for the SongStreamer API running on serverpi. It covers every endpoint the client uses, the two screens (song list and player), playback with a native audio element, the timeline slider, and the −10 / +10 second buttons. Lyrics are out of scope for now; the player screen only reserves space for them.
+This document specifies the browser client for the SongStreamer API running on serverpi. It covers the Songs list/player, the confirmation-gated Import kiosk, playback with a native audio element, the timeline slider, the −10 / +10 second buttons, and complete timed-lyrics authoring/playback.
 
 It does not add frontend source files or assume that the API serves the frontend.
 
@@ -30,6 +30,13 @@ The client has no login or application authentication. Use ordinary CORS request
 | `GET /songs/:id`        | Player screen                    | One song's metadata (deep links, refresh, stale-list check) |
 | `GET /songs/:id/audio`  | Player screen, via `<audio src>` | The M4A stream; the browser issues the Range requests       |
 | `HEAD /songs/:id/audio` | Optional                         | Availability probe; never needed for normal playback        |
+| `GET /api/v1/songs/:id/lyrics` | Player screen               | Complete lyrics for the exact recording, or `404 LYRICS_NOT_FOUND` |
+| `PUT /api/v1/songs/:id/lyrics` | Lyrics editor               | Validate and atomically replace one complete lyrics document |
+| `POST /api/v1/import/inspect` | Import screen             | Inspect one YouTube video and return editable metadata plus compatible native AAC-LC formats |
+| `POST /api/v1/import/jobs` | Import screen                | Queue a confirmed metadata import; response is `202` |
+| `GET /api/v1/import/jobs/:id` | Import screen             | Poll queued/download/verifying/publishing/completed/failed status |
+| `POST /api/v1/import/jobs/:id/retry` | Import screen       | Retry a failed import from the beginning |
+| `GET /api/v1/import/health` | Import screen/operations | Check yt-dlp, ffmpeg, and ffprobe availability |
 | `OPTIONS /*`            | Browser only                     | CORS preflight; the client never calls it directly          |
 
 The full server contract is in [api.md](api.md).
@@ -43,6 +50,8 @@ type Song = {
   artist: string;
   album: string | null;
   duration: number; // seconds, e.g. 306.676009
+  hasLyrics: boolean;
+  audioSha256: string | null;
 };
 
 type SongsResponse = { songs: Song[] };
@@ -60,6 +69,7 @@ Encode the ID as one path segment. The API never returns a filesystem path; the 
 const songsUrl = () => API_BASE + '/songs';
 const songUrl = (id) => API_BASE + '/songs/' + encodeURIComponent(id);
 const songAudioUrl = (id) => songUrl(id) + '/audio';
+const songLyricsUrl = (id) => API_BASE + '/api/v1/songs/' + encodeURIComponent(id) + '/lyrics';
 ```
 
 ### JSON requests
@@ -133,9 +143,63 @@ async function isHealthy() {
 
 Set the audio URL directly as the media element's `src`. Do not fetch the file into a Blob, implement custom range fetching, add Web Audio processing, or transcode in the browser. Seeking with the slider or the ±10 buttons works because the browser turns each seek into a Range request.
 
+## Timed lyrics and karaoke
+
+The public editor has no account or login. The player requests lyrics after it has loaded the song metadata. Render `404 LYRICS_NOT_FOUND` as the Add lyrics action; any other error keeps the retry action visible. `hasLyrics` is only a catalogue hint, so the player still loads the document and checks the exact recording hash.
+
+The authoring flow is an in-memory session with no draft endpoint: find lyrics in a separate search tab, paste and preview the line text, tap line starts, then replay each line and tap its words before explicitly finishing the line end. Offer undo/redo, replay/loop, restart, previous/next, playback-rate control, and small earlier/later corrections. Text changes with matching line/word structure can preserve compatible timestamps; structural changes must confirm and clear timings only for affected lines. A cancel/leave prompt discards the session. Existing saved lyrics remain until a complete replacement succeeds.
+
+The save request must include `schemaVersion: 1`, `songId`, the exact `audioSha256` from `GET /songs/:id` (required for hashed recordings), `language`, `reviewStatus: "complete"`, and ordered lines/words with integer millisecond timestamps. A failed `PUT` leaves the editor session available for retry. Treat `409 AUDIO_VERSION_REQUIRED` or `AUDIO_VERSION_MISMATCH` as a stale recording and reload the song before retrying.
+
+```ts
+type LyricsDocument = {
+  schemaVersion: 1;
+  songId: string;
+  audioSha256: string | null;
+  language: string;
+  reviewStatus: 'complete';
+  lines: Array<{
+    id: string;
+    text: string;
+    startMs: number;
+    endMs: number;
+    words: Array<{ id: string; text: string; startMs: number; endMs?: number }>;
+  }>;
+};
+```
+
+Karaoke playback remains anchored to the same native audio element's direct `currentTime`; an animation-frame loop chooses the current line and progressively fills each word between its start and end (or the next word/line boundary). Keep the previous, current, and next lines visible on the Pi's 800×480 display.
+
+## Native import screen
+
+The Import screen is a public, confirmation-gated kiosk for adding one
+YouTube video to the SongStreamer catalogue. It sends the URL to
+`POST /api/v1/import/inspect` first. Inspection canonicalizes and validates the
+URL, reads the video metadata, and returns only audio-only formats that are
+native AAC-LC (`mp4a.40.2`) in an M4A/MP4 container. Inspection does not start a
+download.
+
+Show the returned title, artist, optional album, duration, and factual stream
+details. The title and artist are required editable fields; album is optional.
+The user must confirm those values before the browser calls
+`POST /api/v1/import/jobs`. Keep the selected compatible format ID from the
+inspection response when creating the job. The server revalidates the source,
+downloads one stream, verifies the resulting file with `ffprobe`, and publishes
+the file and catalogue row only after verification. It preserves the native
+AAC bytes and does not transcode.
+
+Persist the active job ID in browser storage so a refresh can resume polling.
+While the job is `queued`, `downloading`, `verifying`, or `publishing`, keep the
+user on the Import screen and show the current status. A completed job clears
+the Songs cache so the new song appears on the next list read. A failed job
+offers a retry from the beginning. Each accepted import receives a new job and
+song ID; the public kiosk does not perform authentication or duplicate
+deduplication.
+
 ## Screens and navigation
 
-The UI has two screens, matching the wireframe:
+The UI has the Songs list/player screens and the Import kiosk. The Songs list
+and player match the wireframe:
 
 ```
  List screen                         Player screen
@@ -210,7 +274,7 @@ The screen contains:
 
 - A **back arrow** (top left, a button labelled "Back to songs") that sets `location.hash = '#/'`.
 - Title and artist.
-- An empty lyrics region. Reserve the space so adding lyrics later does not move the controls.
+- A karaoke lyrics region with the previous, current, and next lines. Show an **Add lyrics** action when the exact recording has no saved document, and an **Edit lyrics** action when it does.
 - The control bar: **−10**, **Play/Pause**, **+10**, the **timeline slider**, and elapsed / total time.
 
 **Back arrow behavior.** Choose one and apply it consistently:
@@ -411,7 +475,8 @@ Register these listeners once, next to where the audio element is created:
 
 Render every server string (title, artist, album, error message) with `textContent` or a framework's normal escaped text. Never concatenate API values into `innerHTML`; in React, never use `dangerouslySetInnerHTML` for them.
 
-Do not add search, playlists, uploads, login, or account state; those are outside this API.
+Do not add search, playlists, arbitrary file uploads, login, or account state;
+the public YouTube import described above is the only catalogue write path.
 
 ## Layout and accessibility checklist
 

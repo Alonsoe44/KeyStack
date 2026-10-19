@@ -1,7 +1,7 @@
 # Cloud/server Pi storage
 
-The cloud/server Pi uses a separate Samsung SSD for catalogue data and MP3
-assets. The preparation script is deliberately tied to the verified drive
+The cloud/server Pi uses a separate Samsung SSD for catalogue data and native
+AAC-LC M4A assets. The preparation script is deliberately tied to the verified drive
 identity below; it does not use `/dev/sda` as a stable name.
 
 At the time this procedure was prepared, the drive resolved to `/dev/sda` and
@@ -41,7 +41,7 @@ defaults,noatime,nofail,x-systemd.device-timeout=10s
 ```
 
 Before editing `/etc/fstab`, the script saves a timestamped
-`/etc/fstab.keystack-data.*` backup. It creates `sqlite`, `mp3`, and `backups`
+`/etc/fstab.keystack-data.*` backup. It creates `sqlite`, `audio`, and `backups`
 with owner `emilianopolanco5` (`1000:1000`) and mode `0750`, then performs a
 write/delete smoke test as that user. Re-running the script fails when the
 mount or fstab entry already exists or when the target already has the
@@ -62,6 +62,6 @@ this to the service unit that starts the cloud service:
 RequiresMountsFor=/srv/keystack-data
 ```
 
-The service should use `/srv/keystack-data/sqlite`, `/srv/keystack-data/mp3`,
+The service should use `/srv/keystack-data/sqlite`, `/srv/keystack-data/audio`,
 and `/srv/keystack-data/backups` as its configured data paths after the cloud
 service and schema migration are introduced.

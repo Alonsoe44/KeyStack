@@ -1,4 +1,7 @@
 import "./globals.css"
+import { SongPlayerProvider } from "@/app/modules/song-player/components/SongPlayerProvider"
+import { LyricsNavigationGuardProvider } from "@/app/modules/song-player/components/LyricsNavigationGuard"
+import { ImportJobProvider } from "@/app/modules/song-import/components/ImportJobProvider"
 import { AppShell } from "@/components/app-shell"
 import { ThemeProvider } from "@/components/theme-provider"
 
@@ -15,7 +18,13 @@ export default function RootLayout({
     >
       <body>
         <ThemeProvider>
-          <AppShell>{children}</AppShell>
+          <SongPlayerProvider>
+            <ImportJobProvider>
+              <LyricsNavigationGuardProvider>
+                <AppShell>{children}</AppShell>
+              </LyricsNavigationGuardProvider>
+            </ImportJobProvider>
+          </SongPlayerProvider>
         </ThemeProvider>
       </body>
     </html>

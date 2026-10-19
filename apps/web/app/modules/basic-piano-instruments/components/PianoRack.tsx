@@ -16,8 +16,9 @@ function PianoRack({
       {instruments.map((instrument) => (
         <PianoCard
           key={instrument.id}
+          id={instrument.id}
           name={instrument.name}
-          image={instrument.image}
+          description={instrument.description}
           selected={instrument.selected}
           disabled={disabled}
           onClick={() => onSelect?.(instrument.id)}

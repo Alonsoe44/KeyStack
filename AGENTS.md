@@ -11,8 +11,17 @@ roles separate in the code and documentation:
 - **Local/client Pi:** runs the interactive React frontend and the local Node.js
   backend. The local backend owns device-facing behavior like midi connections, and device local configs (volume, brigness) 
 - **Cloud/server Pi:** runs the Fastify service and SQLite catalogue for songs,
-  MP3 assets, and timed karaoke lyrics. It is the source for catalogue and
+  AAC-LC M4A assets, and timed karaoke lyrics. It is the source for catalogue and
   content synchronization.
+
+The agent must never access or test against any real Raspberry Pi client,
+including the Pi 5, during development or validation; the user performs all
+client-Pi hardware acceptance. Run backend, frontend, browser, and container
+checks locally on the MacBook and report those results before deployment. A
+deployment-only SSH session to a client Pi is allowed only after the user
+explicitly authorizes that deployment, and it must not be used for client
+testing or acceptance. Deploy server or client software only after explicit
+deployment direction, with the user handling client-Pi testing.
 
 The current repository already contains a Next.js-based web app and a Node
 server for the hardware client. Treat the planned React frontend, local
@@ -39,8 +48,8 @@ to match this example. Update documentation when the actual layout differs.
 - Local backend: Node.js with Express and TypeScript.
 - Cloud backend: Node.js with Fastify and TypeScript.
 - Catalogue metadata and timed lyrics: SQLite on the cloud/server Pi.
-- Song audio: MP3 files stored as filesystem/object assets, with metadata and
-  stable paths or URLs in SQLite. Do not store MP3 binary data in SQLite unless
+- Song audio: native AAC-LC M4A files stored as filesystem/object assets, with
+  metadata and stable paths or URLs in SQLite. Do not store M4A binary data in SQLite unless
   there is a documented, measured reason to do so.
 - Use shared TypeScript contracts for API payloads. Validate data at service
   boundaries and return explicit errors.
@@ -52,7 +61,7 @@ to match this example. Update documentation when the actual layout differs.
 
 The timing editor should use the audio player's current playback position as
 the clock. A timed lyric must be associated with the exact recording/version of
-the MP3. At minimum, the future format needs:
+the AAC-LC M4A. At minimum, the future format needs:
 
 - track identity and version;
 - language and lyric text;
@@ -70,7 +79,7 @@ repository. Prefer Docker and Docker Compose files checked into the codebase
 over host-wide installation or manual configuration.
 
 - Pin base images and package versions where practical.
-- Keep persistent SQLite and MP3 data in named volumes or explicitly mounted
+- Keep persistent SQLite and AAC-LC M4A data in named volumes or explicitly mounted
   data directories; never bake user content into an image.
 - Provide `.env.example` files and document every required variable. Never
   commit secrets, private keys, or real credentials.
@@ -95,7 +104,7 @@ from application scripts.
   audio assets, lyric versions, and sync records.
 - Store filesystem paths relative to a configured media root, or store opaque
   asset keys, rather than hard-coded absolute paths.
-- Enforce path traversal protection and validate MP3 uploads before publishing
+- Enforce path traversal protection and validate AAC-LC M4A imports before publishing
   them.
 - Add migrations for every SQLite schema change. Do not edit production SQLite
   tables manually without documenting the migration.

@@ -1,4 +1,7 @@
 export type * from "./midi"
+export type * from "./songs"
+export type * from "./imports"
+export type * from "./lyrics"
 
 export interface HealthResponse {
   ok: true
@@ -13,6 +16,17 @@ export interface InstrumentSelectRequest {
 export interface InstrumentSelectResponse {
   ok: boolean
   error?: string
+}
+
+/** GET /api/instruments */
+export interface InstrumentStateResponse {
+  selected: InstrumentId
+  /** Piano (FluidSynth) volume, 0-100. Songs have their own volume. */
+  volume: number
+}
+
+export interface VolumeRequest {
+  volume: number
 }
 
 export interface PowerOffResponse {

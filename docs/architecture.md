@@ -30,20 +30,70 @@ Facts about this environment that the design depends on:
   flows keyboard → FluidSynth with no userspace process in between. The
   subscription disappears when either end goes away, so it has to be
   re-created.
-- **PipeWire is installed** and may grab the DAC before FluidSynth does.
-  KeyStack doesn't manage PipeWire.
+- **PipeWire owns the DAC.** FluidSynth (the piano) and Chromium (the song
+  player) are both PipeWire clients, mixed into one 48 kHz graph on
+  `BossDAC`. Nothing else opens `hw:BossDAC,0` directly; doing so would lock
+  PipeWire out and silence one of the two. The config lives in
+  `deploy/audio/` and is installed by `deploy/audio.sh`.
 
 ## Signal path and processes
 
 ```
-Launchkey ──USB──► ALSA sequencer ──────► FluidSynth ──► ALSA PCM ──► BossDAC ──► amp   [real-time, no JS]
-                        ▲                (fluidsynth.service)
-                        │ creates the subscription (aconnect)
-                        │
-                 apps/server  (keystack-server.service — Node + Express + ws)
-                        │ REST + WebSocket, serves apps/web's static export
-                        ▼
-                 apps/web  (keystack-kiosk — Chromium --kiosk)
+Launchkey ─USB─► ALSA sequencer ─► FluidSynth ──────────┐
+                      ▲            (fluidsynth.service) │
+                      │ creates the subscription        ├─► PipeWire ─► BossDAC ─► amp
+                      │ (aconnect)                      │   48 kHz, quantum 256
+                 apps/server                            │   [real-time, no JS]
+                 (keystack-server.service)              │
+                      │ REST + WebSocket, static export │
+                      ▼                                 │
+                 apps/web (Chromium kiosk) ─ <audio> ───┘
+                                    ▲
+                                    └─ streamed from the server Pi (SongStreamer)
+```
+
+### Who the kiosk talks to
+
+The kiosk UI has two backends: the local server on the same Pi (same origin,
+so `NEXT_PUBLIC_API_BASE_URL` is empty in production) for everything
+device-facing, and SongStreamer on the server Pi
+(`NEXT_PUBLIC_SONGS_API_BASE_URL`, over Tailscale Funnel) for the song
+library and audio.
+
+```mermaid
+flowchart TB
+  subgraph kiosk["Client Pi · Chromium kiosk (apps/web static export)"]
+    voices["Voices"]
+    practice["Practice<br/>(runs in the browser only)"]
+    songs["Songs"]
+    imports["Import<br/>(confirmation-gated native audio)"]
+    settings["Settings"]
+  end
+
+  subgraph serverPi["Server Pi"]
+    ss["SongStreamer API<br/>serverpi.taild695c4.ts.net"]
+  end
+
+  subgraph server["Client Pi · keystack-server.service (apps/server, :3000)"]
+    api["REST /api/*<br/>+ static files"]
+    ws["WebSocket /ws"]
+    reconcile["Reconcile loop<br/>(every 500 ms)"]
+  end
+
+  subgraph sound["Client Pi · sound path (no JavaScript)"]
+    keys["Launchkey<br/>USB MIDI"] --> alsa["ALSA sequencer"] --> fluid["fluidsynth.service"] --> pw["PipeWire"] --> dac["BossDAC → amp → speakers"]
+  end
+
+  voices -- "GET /api/instruments<br/>POST /api/instruments/select" --> api
+  settings -- "GET /api/status<br/>POST /api/system/poweroff" --> api
+  ws -- "midi.status snapshots" --> settings
+  songs -- "GET /songs, /songs/:id<br/>GET /songs/:id/audio<br/>GET/PUT /api/v1/songs/:id/lyrics" --> ss
+  imports -- "POST /api/v1/import/inspect<br/>POST /api/v1/import/jobs<br/>GET /api/v1/import/jobs/:id" --> ss
+  songs -. "&lt;audio&gt; playback" .-> pw
+
+  api -- "prog / gain<br/>(TCP shell :9800)" --> fluid
+  reconcile -- "aconnect: keyboard → synth" --> alsa
+  reconcile -- "status changes" --> ws
 ```
 
 Three processes, each replaceable without the others. FluidSynth and the
@@ -52,9 +102,23 @@ runs as root and deploying needs no sudo; lingering is enabled so they start
 at boot rather than at login. The kiosk needs the desktop session, so labwc's
 autostart launches it at login; deploys relaunch it.
 
+### Timed lyrics boundary
+
+SongStreamer owns the SQLite `song_lyrics` row and complete-document
+validation. The browser editor keeps a timing session in memory, using the
+single native audio element's direct `currentTime`; it sends a document only
+after the final karaoke preview. The versioned document carries the song ID,
+exact `audioSha256` (required for hashed recordings), language, ordered
+lines/words, and integer millisecond timestamps. `PUT
+/api/v1/songs/:id/lyrics` replaces the row atomically; failed validation or a
+stale recording hash leaves the previous saved document available. The public
+API has no auth layer, and the separate local/client Pi never talks to SQLite
+directly.
+
 | Service | Role | If it dies |
 |---|---|---|
-| `fluidsynth.service` | Turns MIDI into audio | No sound until systemd restarts it (2s); the server then re-creates the route to the new client id |
+| `pipewire` + `wireplumber` (Raspberry Pi OS user services) | Own the DAC; mix the synth and the browser | No sound from either. FluidSynth `Requires=pipewire`, so it restarts with it |
+| `fluidsynth.service` | Turns MIDI into audio, as a PipeWire client | No piano sound until systemd restarts it (2s); the server then re-creates the route to the new client id. Songs keep playing |
 | `keystack-server.service` | Wires keyboard → synth, owns state, serves the UI and API | **Sound keeps playing** — the route is in the kernel. On restart it finds the existing route and leaves it alone |
 | `keystack-kiosk` (transient unit, started by `~/keystack/kiosk.sh`) | Waits for the server, then displays the UI | Nothing audible; restarted if it crashes, and re-fetches state |
 
@@ -177,6 +241,9 @@ frontend from `STATIC_DIR`.
 | `GET /api/status` | `{ midi: MidiConnectionStatus }` |
 | `GET /api/health` | `{ ok: true }` |
 | `POST /api/system/poweroff` | Shuts the Pi down (`systemctl poweroff`). Returns `{ ok: true }`, or `{ ok: false, error }` |
+| `GET /api/instruments` | `{ selected: InstrumentId, volume: 0-100 }`: the piano's current voice and volume |
+| `POST /api/instruments/select` | `{ instrumentId }`. Switches FluidSynth's voice. `400` for an unknown id, `503` (with `error`) when the synth can't be reached; the selection only changes on success |
+| `POST /api/instruments/volume` | `{ volume: 0-100 }`. Sets FluidSynth's master gain (100 = gain 0.8; the default 63 matches the unit's `-g 0.5`). Same errors as above |
 | WebSocket `/ws` | Sends a `midi.status` snapshot on connect, then broadcasts every `KeyStackEvent` as JSON |
 
 A full snapshot accompanies every change, so a client that missed an event
@@ -188,8 +255,31 @@ refuses, so a web page open on another device on the network can't switch
 the Pi off. No sudo is involved: logind lets the user of the active desktop
 session power off.
 
-Not implemented yet: `POST /api/instruments/select`, which the
-`/instruments` page already calls.
+The power-off and instrument `POST` routes all require
+`Content-Type: application/json` for that reason.
+
+### Voices and volume
+
+`domain/instruments` maps each voice to a General MIDI program in
+FluidR3_GM, bank 0:
+
+| Voice | Program | FluidR3_GM preset |
+|---|---|---|
+| `piano` | 0 | Yamaha Grand Piano |
+| `electric-piano` | 4 | Rhodes EP |
+| `stevie-wonder-piano` | 7 | Clavinet |
+
+`adapters/fluidsynth/FluidSynthShellAdapter.ts` sends `prog <channel>
+<program>` to every channel except 9 (General MIDI drums), so the voice
+follows whatever channel the keyboard sends on, and `gain <n>` for volume,
+over FluidSynth's command shell (`SYNTH_SHELL_PORT`, the unit's
+`-o shell.port=9800`). Each call opens a connection, sends `quit`, and
+treats an `unknown command`/`error` line as a failure.
+
+FluidSynth forgets both settings when it restarts. The server watches the
+`midi.status` snapshots it publishes; when a new synth client name appears,
+it re-applies the selected voice and volume. The selection lives in memory:
+a server restart goes back to the piano at volume 63 (and re-applies that).
 
 ### Configuration
 
@@ -205,6 +295,7 @@ message on an invalid value.
 | `SYNTH_CLIENT_PREFIX` | `FLUID Synth` | Synth client name prefix |
 | `POLL_INTERVAL_MS` | `500` | Reconcile interval |
 | `ACONNECT_TIMEOUT_MS` | `2000` | Timeout per `aconnect` call |
+| `SYNTH_SHELL_PORT` | `9800` | FluidSynth's command shell, used to switch voices and volume |
 | `CORS_ORIGIN` | unset | `Access-Control-Allow-Origin` for `/api`; only needed in dev, where `next dev` is a different origin |
 
 To use a different keyboard, set `KEYBOARD_CLIENT_PREFIX` and
@@ -212,20 +303,50 @@ To use a different keyboard, set `KEYBOARD_CLIENT_PREFIX` and
 
 ## Frontend (`apps/web`)
 
-A static Next.js export; it has no server-side code of its own. Feature
-modules under `app/modules/` use the same layering as the backend, in
-lighter form:
+A static Next.js export; it has no server-side code of its own. The shell
+(`components/app-shell.tsx`) is a side rail linking the five screens:
+
+| Route | Screen |
+|---|---|
+| `/`, `/instruments` | Voices: voice cards (`/` renders the same page, since the static export can't redirect) |
+| `/scales`, `/scales/chromatic` | Practice: routine list and the chromatic trainer |
+| `/songs` | Song library and player |
+| `/import` | YouTube inspection, metadata confirmation, and native AAC-LC import status |
+| `/settings` | Power off, hardware status, and the banner |
+
+Feature modules under `app/modules/` use the same layering as the backend,
+in lighter form:
 
 - `midi-connection/` — `adapters/midi-status-client.ts` does
   `GET /api/status`, then opens `/ws` and follows `midi.status` snapshots,
   reconnecting with backoff (0.5s doubling to 5s) and re-fetching on each
   attempt. `components/MidiStatusPanel.tsx` shows keyboard / synth / route on
-  the home page.
-- `system-power/` — the power button on the home page. It opens a
+  the Settings page.
+- `system-power/` — the power button on the Settings page. It opens a
   confirmation dialog (`components/ui/alert-dialog.tsx`) and, on confirm,
   calls `POST /api/system/poweroff`.
-- `basic-piano-instruments/` — the instrument picker (`core/`, `adapters/`,
-  `components/`).
+- `basic-piano-instruments/` — the voice picker and piano volume
+  (`core/`, `adapters/`, `components/`). It reads `GET /api/instruments`
+  on load, so the page shows what the synth is actually on, and draws each
+  voice with `VoiceArt` (inline SVG, no image files).
+- `song-player/` — the `/songs` library and player, a client of the
+  SongStreamer API on the cloud/server Pi (contract in
+  [backend-endpoints.md](../backend-endpoints.md), types in
+  `keystack-shared`). `adapters/songstreamer-client.ts` calls `GET /songs`
+  and `GET /songs/:id` on `NEXT_PUBLIC_SONGS_API_BASE_URL` and validates the
+  payloads. `components/SongPlayerProvider.tsx` owns the app's single
+  `HTMLAudioElement`, mounted in the root layout so playback continues
+  across routes; its `src` is `/songs/:id/audio` and the browser streams it
+  with native Range requests. Screens use hash routing (`#/` list,
+  `#/songs/<id>` player) so deep links work on the static export. `core/`
+  holds the pure seek/clamp and time-format logic.
+
+- `song-import/` — the public YouTube import kiosk. It calls SongStreamer for
+  metadata inspection, requires editable title/artist/optional album
+  confirmation before creating a job, persists the active job ID across a
+  refresh, locks navigation while the server downloads/verifies/publishes, and
+  invalidates the Songs cache after completion. It never talks to SQLite or
+  device hardware directly.
 
 The scale trainer, fingering table and metronome run entirely in the
 browser.
@@ -245,10 +366,8 @@ browser.
 
 ## Not built yet
 
-- Instrument presets and volume (FluidSynth's TCP shell is already exposed
-  on port 9800; volume would go through the ALSA mixer on `BossDAC`)
+- Remembering the voice and volume across server restarts
 - A native ALSA binding or udev triggers in place of polling `aconnect`
 - Other engines behind a `SoundEngine` port (sfizz, Pianoteq)
-- PipeWire handling
 - Reading MIDI notes in the backend for UI features such as chord detection
 - Driving the WS2812 status LED

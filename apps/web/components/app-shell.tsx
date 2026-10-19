@@ -1,46 +1,68 @@
-import Link from "next/link"
-import { Gauge, LibraryBig, Music2 } from "lucide-react"
+"use client"
 
-import { PowerOffButton } from "@/app/modules/system-power/components/PowerOffButton"
+import { useEffect } from "react"
+import Link from "next/link"
+import { usePathname, useRouter } from "next/navigation"
+import { Disc3, Download, LibraryBig, Music2, Settings } from "lucide-react"
+
+import { cn } from "@/lib/utils"
+import { useImportJob } from "@/app/modules/song-import/components/ImportJobProvider"
+import { useLyricsNavigationGuard } from "@/app/modules/song-player/components/LyricsNavigationGuard"
 
 const navigation = [
-  { href: "/", label: "Home", icon: Gauge },
-  { href: "/instruments", label: "Voices", icon: Music2 },
-  { href: "/scales", label: "Practice", icon: LibraryBig },
+  // "/" renders the Voices screen, so the kiosk boots straight into it.
+  { href: "/instruments", label: "Voices", icon: Music2, match: ["/", "/instruments"] },
+  { href: "/scales", label: "Practice", icon: LibraryBig, match: ["/scales"] },
+  { href: "/songs", label: "Songs", icon: Disc3, match: ["/songs"] },
+  { href: "/import", label: "Import", icon: Download, match: ["/import"] },
+  { href: "/settings", label: "Settings", icon: Settings, match: ["/settings"] },
 ]
 
+function isActive(pathname: string, match: string[]) {
+  const path = pathname.replace(/\/$/, "") || "/"
+  return match.some((prefix) => (prefix === "/" ? path === "/" : path === prefix || path.startsWith(`${prefix}/`)))
+}
+
 export function AppShell({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname()
+  const router = useRouter()
+  const { active: importActive } = useImportJob()
+  const { request: requestLyricsLeave } = useLyricsNavigationGuard()
+
+  // A running import owns the kiosk until publishing succeeds or fails.
+  useEffect(() => {
+    if (importActive && pathname !== "/import") router.replace("/import")
+  }, [importActive, pathname, router])
+
   return (
     <div className="keystack-app">
-      <header className="site-header">
-        <Link href="/" className="brand-lockup" aria-label="KeyStack home">
-          <span className="brand-mark" aria-hidden="true">
-            <span />
-            <span />
-            <span />
-          </span>
-          <span className="brand-word">KEYSTACK</span>
-        </Link>
-
-        <nav className="site-nav" aria-label="Primary navigation">
-          {navigation.map(({ href, label, icon: Icon }) => (
-            <Link key={href} href={href} className="site-nav-link">
+      <nav className="side-nav" aria-label="Primary navigation">
+        {navigation.map(({ href, label, icon: Icon, match }) => {
+          const active = isActive(pathname, match)
+          return (
+            <Link
+              key={href}
+              href={href}
+              className={cn(
+                "side-nav-link",
+                active && "side-nav-link-active",
+                importActive && href !== "/import" && "side-nav-link-locked"
+              )}
+              aria-current={active ? "page" : undefined}
+              aria-disabled={importActive && href !== "/import"}
+              onClick={(event) => {
+                if (importActive && href !== "/import") event.preventDefault()
+                if (event.defaultPrevented) return
+                if (requestLyricsLeave(() => router.push(href))) event.preventDefault()
+              }}
+            >
               <Icon aria-hidden="true" />
               <span>{label}</span>
             </Link>
-          ))}
-        </nav>
-
-        <div className="header-actions">
-          <span className="device-badge">LOCAL PI</span>
-          <PowerOffButton />
-        </div>
-      </header>
+          )
+        })}
+      </nav>
       <main className="site-main">{children}</main>
-      <footer className="site-footer">
-        <span>KEYSTACK / PIANO LAB</span>
-        <span>PLAY THE NEXT NOTE</span>
-      </footer>
     </div>
   )
 }

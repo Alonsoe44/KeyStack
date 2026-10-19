@@ -1,12 +1,15 @@
 #!/bin/bash
 # One-time setup on a fresh Pi, with no root access needed: installs Node.js
 # into ~/keystack/node, installs the systemd user units and the labwc kiosk
-# autostart, and starts FluidSynth. Run ./deploy/sync.sh afterwards (and on
+# autostart, sets up PipeWire as the owner of the DAC (deploy/audio.sh), and
+# starts FluidSynth. Run ./deploy/sync.sh afterwards (and on
 # every subsequent code change) to actually ship the built app.
 #
-# FluidSynth, aconnect (alsa-utils), Chromium and the FluidR3_GM soundfont
-# must already be installed — that is the one step that needs sudo:
-#   sudo apt-get install -y fluidsynth fluid-soundfont-gm alsa-utils chromium
+# FluidSynth, aconnect (alsa-utils), Chromium, PipeWire, RTKit and the
+# FluidR3_GM soundfont must already be installed — that is the one step that
+# needs sudo:
+#   sudo apt-get install -y fluidsynth fluid-soundfont-gm alsa-utils chromium \
+#     pipewire pipewire-pulse wireplumber rtkit
 
 set -euo pipefail
 
@@ -37,7 +40,7 @@ tar -xJf "$file" -C ~/keystack/node --strip-components=1
 echo "Installed Node.js $(~/keystack/node/bin/node -v)"
 REMOTE
 
-scp systemd/fluidsynth.service systemd/keystack-server.service "$PI_HOST:.config/systemd/user/"
+scp systemd/keystack-server.service "$PI_HOST:.config/systemd/user/"
 scp kiosk/labwc-autostart "$PI_HOST:.config/labwc/autostart"
 scp kiosk/kiosk.sh "$PI_HOST:keystack/kiosk.sh"
 
@@ -46,10 +49,10 @@ ssh "$PI_HOST" '
   # the Pi auto-logs in, which starts them too.
   loginctl enable-linger 2>/dev/null || echo "note: could not enable linger; services will start at login"
   systemctl --user daemon-reload
-  # A fluidsynth started by hand would hold the DAC and block the service.
-  systemctl --user is-active -q fluidsynth || pkill -x fluidsynth || true
-  systemctl --user enable --now fluidsynth
   systemctl --user enable keystack-server
 '
+
+# PipeWire config, the FluidSynth unit, and (re)starting the audio services.
+./audio.sh
 
 echo "Provisioned. Run ./deploy/sync.sh to build and deploy the app."

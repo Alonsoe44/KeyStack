@@ -38,27 +38,34 @@ a backend lives in its module under `apps/web/app/modules/`.
 
 | Component | Where | Use |
 | --- | --- | --- |
-| `AppShell` | `components/app-shell.tsx` | Header with navigation, the local Pi label, and power control on every route |
-| `HeroKeys` | `components/hero-keys.tsx` | Decorative one-octave keyboard on the home hero; card-colored keys, ink black keys, hard offset shadow |
+| `AppShell` | `components/app-shell.tsx` | Full-height side rail (Voices, Practice, Songs, Settings) on every route; the current route is cobalt. No top bar or footer |
 | `Piano` | `components/piano.tsx` | On-screen keyboard for the practice tools |
 | `ChromaticPractice` | `components/chromatic-practice.tsx` | Two-column chromatic scale tool |
 | `Metronome`, `CountdownTimer` | `components/` | Practice timing controls |
 | `FingeringTable` | `components/fingering-table.tsx` | Finger numbers for the selected scale |
 | `Button`, `AlertDialog`, `Popover`, `Slider` | `components/ui/` | shadcn primitives restyled with the tokens above |
 | `MidiStatusPanel` | `app/modules/midi-connection/` | Live keyboard connection status |
-| `PianoRackContainer`, `VolumeControl` | `app/modules/basic-piano-instruments/` | Voice selection and output volume, through the local backend adapter |
-| `PowerOffButton` | `app/modules/system-power/` | Confirmed shutdown of the Pi |
+| `PianoRackContainer`, `PianoCard`, `VoiceArt` | `app/modules/basic-piano-instruments/` | Voice cards. `VoiceArt` draws each voice in the tokens: an ink grand with its lid propped, a cobalt Rhodes on thin legs, a pink wedge Clavinet with knobs. The selected card turns cobalt with a yellow art panel and a `PLAYING` tag |
+| `VolumeControl` | `app/modules/basic-piano-instruments/` | The piano's volume (FluidSynth gain); sends on release. Songs keep their own level. Not placed on any screen at the moment: the piano plays at the server's volume (63 by default) |
+| `PowerOffButton` | `app/modules/system-power/` | Confirmed shutdown of the Pi, on the Settings route |
+| `SongsScreen`, `SongList`, `SongPlayerScreen` | `app/modules/song-player/` | Song cards (title, artist, `PLAYING` chip) and the player: ±10 buttons, yellow play toggle, ink-framed timeline. On short screens (the 800x480 kiosk) the player drops the page heading so the controls stay visible |
 
 Illustrations are inline SVG components rather than downloaded images, so they
 scale crisply and follow the tokens. KeyStack has no mascot.
 
 ## Layout patterns
 
-- The shared shell keeps navigation, the local Pi label, and power control in a
-  consistent header on every route.
-- The home route combines a product action area, live MIDI status, and direct
-  links to the two working modes. It is an app surface, not a marketing-only
-  landing page.
+- The kiosk is one screen, not a website: a side rail on the left and the
+  route's content filling the rest of the viewport. There is no top bar,
+  footer, or full-screen hero title.
+- Each route opens with a compact panel heading (an eyebrow plus a
+  `panel-heading`, e.g. "Pick a voice."), not a display-size title.
+- Voices, Practice and Songs are sized to fit the 800x480 kiosk without
+  scrolling. Settings is the one route that scrolls: device label and power
+  control, live MIDI status, then the cobalt "Play louder." banner at the
+  bottom.
+- `/` renders the Voices screen (the static export can't redirect), so the
+  kiosk boots straight into the voice picker.
 - Instrument cards remain real buttons and continue to call the local backend
   adapter. Their selected state is cobalt with a yellow action marker.
 - Practice controls remain tied to the existing audio and scale modules. The

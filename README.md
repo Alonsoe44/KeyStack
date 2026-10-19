@@ -3,8 +3,9 @@
 A portable DIY digital piano built on a Raspberry Pi 5. Power it on and it
 boots straight into a playable instrument: a USB MIDI keyboard drives
 FluidSynth through a DAC HAT, and a 5" touchscreen shows a practice UI
-(chromatic scale trainer, fingering table, metronome, instrument picker,
-connection status).
+with a side rail for Voices (instrument picker), Practice
+(chromatic scale trainer, fingering table, metronome), Songs, Import, and Settings
+(power off and connection status).
 
 ## Hardware
 
@@ -100,6 +101,13 @@ npm run dev:lan   # same, reachable from other devices on your network
 
 In dev, the frontend sends API calls to `NEXT_PUBLIC_API_BASE_URL`
 (`http://localhost:4000`, set in `apps/web/.env.development`).
+
+The song library (`/songs`) talks to the SongStreamer API on the server Pi
+at `NEXT_PUBLIC_SONGS_API_BASE_URL`. It is read at build time: production
+builds (`npm run build`, `npm run pi:deploy`) take it from
+`apps/web/.env.production` (`https://serverpi.taild695c4.ts.net`); for
+`next dev`, set it in `apps/web/.env.development.local` (see
+`apps/web/.env.example`).
 
 ### Backend (`apps/server`)
 

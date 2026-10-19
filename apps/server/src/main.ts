@@ -3,11 +3,14 @@ import path from "node:path"
 import express from "express"
 import type { KeyStackEvent } from "keystack-shared"
 import { AconnectSequencerAdapter } from "./adapters/alsa/AconnectSequencerAdapter"
+import { FluidSynthShellAdapter } from "./adapters/fluidsynth/FluidSynthShellAdapter"
+import { instrumentRoutes } from "./adapters/http/instrumentRoutes"
 import { statusRoutes } from "./adapters/http/statusRoutes"
 import { systemRoutes } from "./adapters/http/systemRoutes"
 import { SystemctlPowerAdapter } from "./adapters/system/SystemctlPowerAdapter"
 import { WebSocketEventPublisher } from "./adapters/ws/WebSocketEventPublisher"
 import { type Config, loadConfig } from "./config"
+import { InstrumentService } from "./domain/instruments/instruments"
 import { MidiConnectionReconciler } from "./domain/midi-connection/reconciler"
 import { systemClock } from "./ports/ClockPort"
 import { consoleLogger as logger } from "./ports/LoggerPort"
@@ -35,9 +38,25 @@ function main(): void {
     }),
     logger
   )
+  const instruments = new InstrumentService(
+    new FluidSynthShellAdapter(config.synthShellPort),
+    logger
+  )
+  // A new synth client name means a new FluidSynth process, which starts on
+  // program 0: put it back on the selected voice.
+  let lastSynthName: string | undefined
+  const publishAndTrackSynth = {
+    publish(event: KeyStackEvent) {
+      publisher.publish(event)
+      if (event.type !== "midi.status") return
+      const { synth } = event.status
+      if (synth.present && synth.name !== lastSynthName) void instruments.reapply()
+      lastSynthName = synth.present ? synth.name : undefined
+    },
+  }
   const reconciler: MidiConnectionReconciler = new MidiConnectionReconciler(
     new AconnectSequencerAdapter(config.aconnectTimeoutMs),
-    publisher,
+    publishAndTrackSynth,
     config,
     systemClock,
     logger
@@ -60,6 +79,7 @@ function main(): void {
     statusRoutes(() => reconciler.getStatus())
   )
   app.use("/api", systemRoutes(new SystemctlPowerAdapter(), logger))
+  app.use("/api", instrumentRoutes(instruments))
   // The static export has both scales.html and a scales/ directory, so
   // /scales has to be mapped to the .html file before express.static sees it.
   app.get(/.*/, (req, res, next) => {
