@@ -218,7 +218,9 @@ kiosk reload. Typing on the touch screen is for the user to accept on the Pi.
 The thick `ScrollArea` scrollbar (commit `5223fce`) followed the same way; the
 keyboard build it replaced is at
 `~/keystack/releases/scrollbar-20261019/out.previous`, and all three services
-reported active after the reload.
+reported active after the reload. The custom component was then reverted in favour of a
+thick native scrollbar (commit `4e83e9d`), deployed the same way; the
+component build is at `~/keystack/releases/native-scrollbar-20261019/out.previous`.
 
 ## The kiosk
 
