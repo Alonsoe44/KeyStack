@@ -56,6 +56,7 @@ const finiteDuration = (audio: HTMLAudioElement) =>
 export function SongPlayerProvider({ children }: { children: React.ReactNode }) {
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const songIdRef = useRef<string | null>(null)
+  const audioHashRef = useRef<string | null>(null)
   const [state, setState] = useState<PlayerState>(initialState)
   const [songs, setSongs] = useState<Song[] | null>(null)
 
@@ -103,16 +104,19 @@ export function SongPlayerProvider({ children }: { children: React.ReactNode }) 
   const open = useCallback((song: Song) => {
     const audio = audioRef.current
     if (!audio) return
-    if (songIdRef.current === song.id) {
+    // Same recording: keep the stream. A changed hash means new audio behind the same ID.
+    if (songIdRef.current === song.id && audioHashRef.current === song.audioSha256) {
       setState((prev) => ({ ...prev, song }))
       return
     }
+    audioHashRef.current = song.audioSha256
     songIdRef.current = song.id
     audio.pause()
     audio.playbackRate = 1
     setState({ ...initialState, song, phase: "loading" })
     // The browser streams with native Range requests; never fetch the file ourselves.
-    audio.src = songAudioUrl(song.id)
+    // The hash query keeps a cached older recording from being reused after a replacement.
+    audio.src = song.audioSha256 ? `${songAudioUrl(song.id)}?v=${song.audioSha256}` : songAudioUrl(song.id)
     audio.load()
   }, [])
 

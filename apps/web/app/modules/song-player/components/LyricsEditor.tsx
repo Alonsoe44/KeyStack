@@ -22,6 +22,8 @@ type SourceTab = "find" | "paste"
 type HistoryEntry = { draft: Draft; selectedLine: number; selectedWord: number }
 
 const TIMESTAMP_STEP_MS = 50
+// SongStreamer answers 409 with these codes when the recording hash we sent is stale.
+const STALE_RECORDING_CODES = new Set(["AUDIO_VERSION_MISMATCH", "AUDIO_VERSION_REQUIRED"])
 
 function tokens(text: string): string[] {
   return text.trim().split(/\s+/).filter(Boolean)
@@ -186,11 +188,14 @@ export function LyricsEditor({
   existing,
   onSaved,
   onCancel,
+  onStaleRecording,
 }: {
   song: Song
   existing: LyricsDocument | null
   onSaved: (document: LyricsDocument) => void
   onCancel: () => void
+  /** Reloads the song so the next save carries the current audioSha256. */
+  onStaleRecording: () => Promise<Song>
 }) {
   const player = useSongPlayer()
   const { register: registerLyricsLeave } = useLyricsNavigationGuard()
@@ -206,6 +211,7 @@ export function LyricsEditor({
   const [future, setFuture] = useState<HistoryEntry[]>([])
   const [cancelPrompt, setCancelPrompt] = useState(false)
   const [saveError, setSaveError] = useState<string | null>(null)
+  const [staleNotice, setStaleNotice] = useState<string | null>(null)
   const [saving, setSaving] = useState(false)
   const [textError, setTextError] = useState<string | null>(null)
   const [timingError, setTimingError] = useState<string | null>(null)
@@ -510,11 +516,22 @@ export function LyricsEditor({
     if (!complete) return
     setSaving(true)
     setSaveError(null)
+    setStaleNotice(null)
     try {
       const saved = await saveLyrics(song.id, requestFromDocument(complete))
       player.setPlaybackRate(1)
       onSaved(saved)
     } catch (error) {
+      if (error instanceof ApiRequestError && error.status === 409 && STALE_RECORDING_CODES.has(error.code)) {
+        // Keep the session: reload the song, then let the user re-check timings before saving again.
+        try {
+          await onStaleRecording()
+          setStaleNotice("The recording on the server changed, so the song was reloaded. Play the preview to check the timings, then save again.")
+        } catch (reloadError) {
+          setSaveError(`The recording on the server changed and the song could not be reloaded: ${reloadError instanceof Error ? reloadError.message : "unknown error"}`)
+        }
+        return
+      }
       setSaveError(error instanceof ApiRequestError ? error.message : error instanceof Error ? error.message : "Could not save lyrics")
     } finally {
       setSaving(false)
@@ -653,6 +670,7 @@ export function LyricsEditor({
           <p className="lyrics-editor-instruction">Listen through the complete karaoke preview, then save when every line and word feels right.</p>
           {complete ? <KaraokeLyrics document={complete} /> : <p className="lyrics-error" role="alert">{validationError ?? "Complete every timing before previewing."}</p>}
           <div className="lyrics-editor-actions"><Button type="button" variant="outline" onClick={() => { setLooping(false); setPhase("source") }}>Edit text</Button><Button type="button" variant="outline" onClick={() => { setLooping(false); setPhase("line-starts") }}>Edit line starts</Button><Button type="button" variant="outline" onClick={() => { setLooping(false); setPhase("word-timing") }}>Edit word timings</Button><Button type="button" className="button-yellow" onClick={() => void save()} disabled={!complete || saving}>{saving ? "Saving…" : "Save lyrics"}</Button></div>
+          {staleNotice && <p className="lyrics-error" role="alert">{staleNotice}</p>}
           {saveError && <p className="lyrics-error" role="alert">{saveError} <Button type="button" variant="outline" size="sm" onClick={() => void save()} disabled={saving}>Retry save</Button></p>}
         </>
       )}

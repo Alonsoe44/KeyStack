@@ -84,6 +84,13 @@ export function SongPlayerScreen({ id }: { id: string }) {
     if (songs) setSongs(songs.map((item) => item.id === id ? { ...item, hasLyrics: true } : item))
   }
 
+  const reloadSong = async () => {
+    const fresh = await loadSong(id)
+    open(fresh)
+    if (songs) setSongs(songs.map((item) => item.id === id ? fresh : item))
+    return fresh
+  }
+
   return (
     <section className="song-player" aria-labelledby="song-player-title">
       <Button variant="ghost" size="sm" className="back-link" onClick={() => { if (!requestLyricsLeave(backToList)) backToList() }} aria-label="Back to songs">
@@ -114,6 +121,7 @@ export function SongPlayerScreen({ id }: { id: string }) {
                     song={song}
                     existing={lyrics}
                     onSaved={savedLyrics}
+                    onStaleRecording={reloadSong}
                     onCancel={() => {
                       setEditingLyrics(false)
                       player.setPlaybackRate(1)
