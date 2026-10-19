@@ -277,6 +277,14 @@ the desktop user may change Wi-Fi without the polkit rule in
 [Wi-Fi hotspot](#wi-fi-hotspot-networkmanager-access), and connecting to the
 iPhone hotspot, are for the user to accept on the Pi.
 
+A fix for the hotspot modal showing two scrollbars (commit `6390ebc`) followed
+the same evening as a frontend-only deploy: the export, built from a clean
+tree at that commit, was synced and the kiosk reloaded; the server bundle was
+left as is. The export it replaced is at
+`~/keystack/releases/wifi-modal-20261019/out.previous`. `keystack-server`,
+`fluidsynth` and `keystack-kiosk` reported active after the reload. Checking
+the modal on the touch screen is for the user to accept.
+
 ## The kiosk
 
 `~/keystack/kiosk.sh [url]` (source: `deploy/kiosk/kiosk.sh`) shows a URL
