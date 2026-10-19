@@ -208,6 +208,13 @@ commit `a5a49b3` (search included, no uncommitted code). The replaced export
 is kept at `~/keystack/releases/search-20261019/out.replaced`; the pre-search
 rollback remains `out.previous`.
 
+Later that evening the on-screen keyboard (commit `b666a65`) went out the same
+way: the client Pi received only the frontend export built from that commit
+(with `NEXT_PUBLIC_ONSCREEN_KEYBOARD=on`). The export it replaced, the YouTube
+search build, is at `~/keystack/releases/keyboard-20261019/out.previous`.
+`keystack-server`, `fluidsynth`, and `keystack-kiosk` reported active after the
+kiosk reload. Typing on the touch screen is for the user to accept on the Pi.
+
 ## The kiosk
 
 `~/keystack/kiosk.sh [url]` (source: `deploy/kiosk/kiosk.sh`) shows a URL
