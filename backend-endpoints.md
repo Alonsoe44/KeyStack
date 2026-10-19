@@ -32,6 +32,7 @@ The client has no login or application authentication. Use ordinary CORS request
 | `HEAD /songs/:id/audio` | Optional                         | Availability probe; never needed for normal playback        |
 | `GET /api/v1/songs/:id/lyrics` | Player screen               | Complete lyrics for the exact recording, or `404 LYRICS_NOT_FOUND` |
 | `PUT /api/v1/songs/:id/lyrics` | Lyrics editor               | Validate and atomically replace one complete lyrics document |
+| `GET /api/v1/import/search?q=` | Import screen search panel | Up to 10 Source Videos (YouTube results that can be imported) |
 | `POST /api/v1/import/inspect` | Import screen             | Inspect one YouTube video and return editable metadata plus compatible native AAC-LC formats |
 | `POST /api/v1/import/jobs` | Import screen                | Queue a confirmed metadata import; response is `202` |
 | `GET /api/v1/import/jobs/:id` | Import screen             | Poll queued/download/verifying/publishing/completed/failed status |
@@ -187,6 +188,20 @@ inspection response when creating the job. The server revalidates the source,
 downloads one stream, verifies the resulting file with `ffprobe`, and publishes
 the file and catalogue row only after verification. It preserves the native
 AAC bytes and does not transcode.
+
+The URL can also come from the **Find on YouTube** panel, which exists because
+the kiosk has no tabs or address bar and YouTube pages refuse to load in
+iframes. It calls `GET /api/v1/import/search?q=<text>` and lists the returned
+Source Videos (`id`, canonical `url`, `title`, `channel`, `durationSeconds`,
+`thumbnailUrl`); videos over 15 minutes get a length badge. Tapping one
+previews it in YouTube's embeddable player (`youtube-nocookie.com`), falling
+back to the thumbnail when the uploader disabled embedding. **Use this song**
+closes the panel, fills the URL field with the Source Video's `url`, and runs
+inspection; the user still confirms metadata before any job starts. The panel
+keeps its last search until the user leaves the Import page. Search errors are
+`400 INVALID_QUERY`, `502 SEARCH_FAILED`, `503 DEPENDENCY_UNAVAILABLE`, and
+`504 SEARCH_TIMEOUT` (yt-dlp ran longer than 30 seconds). Thumbnails and the
+preview load directly from YouTube, so the kiosk needs internet access for them.
 
 Persist the active job ID in browser storage so a refresh can resume polling.
 While the job is `queued`, `downloading`, `verifying`, or `publishing`, keep the

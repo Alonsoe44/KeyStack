@@ -35,6 +35,21 @@ export type ImportInspection = {
   policyMessage: string
 }
 
+/** A YouTube video found by search that can be imported to create a Song. */
+export type SourceVideo = {
+  id: string
+  /** Canonical watch URL, accepted by POST /api/v1/import/inspect. */
+  url: string
+  title: string
+  channel: string | null
+  durationSeconds: number | null
+  thumbnailUrl: string
+}
+
+export type SourceVideoSearchResponse = {
+  sourceVideos: SourceVideo[]
+}
+
 export type ImportJob = {
   id: string
   title: string

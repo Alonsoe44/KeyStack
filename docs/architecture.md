@@ -311,7 +311,7 @@ A static Next.js export; it has no server-side code of its own. The shell
 | `/`, `/instruments` | Voices: voice cards (`/` renders the same page, since the static export can't redirect) |
 | `/scales`, `/scales/chromatic` | Practice: routine list and the chromatic trainer |
 | `/songs` | Song library and player |
-| `/import` | YouTube inspection, metadata confirmation, and native AAC-LC import status |
+| `/import` | YouTube search and preview, inspection, metadata confirmation, and native AAC-LC import status |
 | `/settings` | Power off, hardware status, and the banner |
 
 Feature modules under `app/modules/` use the same layering as the backend,

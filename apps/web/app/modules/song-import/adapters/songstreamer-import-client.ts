@@ -3,6 +3,8 @@ import type {
   ImportInspection,
   ImportJob,
   ImportErrorBody,
+  SourceVideo,
+  SourceVideoSearchResponse,
 } from "keystack-shared"
 
 const API_BASE = (process.env.NEXT_PUBLIC_SONGS_API_BASE_URL ?? "").replace(/\/+$/, "")
@@ -60,6 +62,12 @@ export async function inspectImport(url: string, signal?: AbortSignal): Promise<
     body: JSON.stringify({ url }),
     signal,
   })
+}
+
+export async function searchSourceVideos(query: string, signal?: AbortSignal): Promise<SourceVideo[]> {
+  const params = new URLSearchParams({ q: query })
+  const body = await requestJson<SourceVideoSearchResponse>(`/api/v1/import/search?${params}`, { signal })
+  return body.sourceVideos
 }
 
 export async function createImportJob(request: CreateImportRequest): Promise<ImportJob> {

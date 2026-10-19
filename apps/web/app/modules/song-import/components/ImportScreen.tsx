@@ -1,8 +1,8 @@
 "use client"
 
 import { useCallback, useEffect, useRef, useState } from "react"
-import type { ImportInspection } from "keystack-shared"
-import { AlertTriangle, Check, Download, LoaderCircle, RotateCcw, Search } from "lucide-react"
+import type { ImportInspection, SourceVideo } from "keystack-shared"
+import { AlertTriangle, Check, Download, LoaderCircle, MonitorPlay, RotateCcw, Search } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
 import { useSongPlayer } from "@/app/modules/song-player/components/SongPlayerProvider"
@@ -15,6 +15,7 @@ import {
   getImportJob,
 } from "../adapters/songstreamer-import-client"
 import { useImportJob } from "./ImportJobProvider"
+import { SourceVideoSearch } from "./SourceVideoSearch"
 
 type FormState = { title: string; artist: string; album: string; formatId: string }
 
@@ -45,6 +46,7 @@ export function ImportScreen() {
   const [form, setForm] = useState<FormState>({ title: "", artist: "", album: "", formatId: "" })
   const [busy, setBusy] = useState<"inspect" | "create" | "retry" | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [searchOpen, setSearchOpen] = useState(false)
   const refreshedJobRef = useRef<string | null>(null)
   const activeJobId = active ? job?.id ?? null : null
 
@@ -90,13 +92,12 @@ export function ImportScreen() {
     }
   }, [activeJobId, clearJob, setJob, setSongs])
 
-  const inspect = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
-    event.preventDefault()
+  const inspectUrl = useCallback(async (target: string) => {
     setBusy("inspect")
     setError(null)
     setInspection(null)
     try {
-      const next = await inspectImport(url)
+      const next = await inspectImport(target)
       setInspection(next)
       setForm({
         title: next.title,
@@ -109,7 +110,20 @@ export function ImportScreen() {
     } finally {
       setBusy(null)
     }
-  }, [url])
+  }, [])
+
+  const inspect = useCallback((event: React.FormEvent<HTMLFormElement>) => {
+    event.preventDefault()
+    void inspectUrl(url)
+  }, [inspectUrl, url])
+
+  const closeSearch = useCallback(() => setSearchOpen(false), [])
+
+  const useSourceVideo = useCallback((video: SourceVideo) => {
+    setSearchOpen(false)
+    setUrl(video.url)
+    void inspectUrl(video.url)
+  }, [inspectUrl])
 
   const confirmImport = useCallback(async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault()
@@ -215,7 +229,7 @@ export function ImportScreen() {
       </div>
 
       {!inspection ? (
-        <form className="import-url-form" onSubmit={(event) => void inspect(event)}>
+        <form className="import-url-form" onSubmit={inspect}>
           <label htmlFor="youtube-url">YouTube video URL</label>
           <div className="import-url-row">
             <input
@@ -236,6 +250,10 @@ export function ImportScreen() {
               Inspect
             </Button>
           </div>
+          <Button type="button" variant="outline" className="import-find-button" onClick={() => setSearchOpen(true)} disabled={busy !== null}>
+            <MonitorPlay aria-hidden="true" />
+            Find on YouTube
+          </Button>
         </form>
       ) : null}
 
@@ -294,6 +312,8 @@ export function ImportScreen() {
           </Button>
         </form>
       )}
+
+      <SourceVideoSearch open={searchOpen} onClose={closeSearch} onUse={useSourceVideo} />
     </section>
   )
 }
