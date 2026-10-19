@@ -222,6 +222,21 @@ reported active after the reload. The custom component was then reverted in favo
 thick native scrollbar (commit `4e83e9d`), deployed the same way; the
 component build is at `~/keystack/releases/native-scrollbar-20261019/out.previous`.
 
+On 2026-10-19 (~20:33) the LRCLIB lyrics lookup (commit `ffbdbd8`) went out
+with a full `pi:deploy`, because the editor's **Find lyrics** tab needs the
+new local server routes (`/api/v1/lyrics/lookup`, `/search`): both the
+frontend export and the server bundle were replaced, built from a clean tree
+at that commit. The previous export and bundle are in
+`~/keystack/releases/lrclib-20261019/` (`out.previous`, `index.cjs.previous`);
+to roll back, copy both back into `~/keystack/out` and
+`~/keystack/server/index.cjs`, then run
+`systemctl --user restart keystack-server && keystack/kiosk.sh`. After the
+restart the server re-created the keyboard → synth route, and
+`keystack-server`, `fluidsynth` and `keystack-kiosk` reported active. The
+deploy used `PI_HOST=emilianopolanco5@pekepi.local`; the `pi` SSH alias still
+pointed at the old address `192.168.1.140`. Looking up lyrics on the Pi, which
+needs the Pi to reach lrclib.net, is for the user to accept.
+
 ## The kiosk
 
 `~/keystack/kiosk.sh [url]` (source: `deploy/kiosk/kiosk.sh`) shows a URL
