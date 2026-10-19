@@ -202,6 +202,11 @@ frontend export from KeyStack commit `28b43ec`, which adds the Import screen's
 into `~/keystack/out` and run `keystack/kiosk.sh`. `keystack-server`,
 `fluidsynth`, and `keystack-kiosk` reported active after the reload. Client
 UI, playback, and hardware acceptance remain the user's responsibility.
+That first export accidentally included uncommitted song-player edits from the
+working tree, so it was replaced the same evening with a rebuild of exactly
+commit `6f84046` (search included, no uncommitted code). The replaced export
+is kept at `~/keystack/releases/search-20261019/out.replaced`; the pre-search
+rollback remains `out.previous`.
 
 ## The kiosk
 
