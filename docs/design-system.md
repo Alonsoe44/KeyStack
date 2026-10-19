@@ -50,6 +50,11 @@ a backend lives in its module under `apps/web/app/modules/`.
 | `PowerOffButton` | `app/modules/system-power/` | Confirmed shutdown of the Pi, on the Settings route |
 | `SongsScreen`, `SongList`, `SongPlayerScreen` | `app/modules/song-player/` | Song cards (title, artist, `PLAYING` chip) and the player: ±10 buttons, yellow play toggle, ink-framed timeline. On short screens (the 800x480 kiosk) the player drops the page heading so the controls stay visible |
 
+Scrolling uses the browser's own scrollbar (`overflow: auto`), so it appears
+only where content overflows. `globals.css` makes it thick for the touch screen:
+24 px, an ink thumb on a `--secondary` track that turns cobalt while dragged.
+There is no custom scroll component.
+
 Illustrations are inline SVG components rather than downloaded images, so they
 scale crisply and follow the tokens. KeyStack has no mascot.
 
