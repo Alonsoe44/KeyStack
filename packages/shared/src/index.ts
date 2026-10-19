@@ -2,6 +2,7 @@ export type * from "./midi"
 export type * from "./songs"
 export type * from "./imports"
 export type * from "./lyrics"
+export type * from "./lyrics-lookup"
 
 export interface HealthResponse {
   ok: true

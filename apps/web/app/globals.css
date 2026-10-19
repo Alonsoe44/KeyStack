@@ -937,7 +937,6 @@
 }
 
 .lyrics-editor-instruction,
-.lyrics-find-panel p,
 .lyrics-error,
 .lyrics-muted,
 .lyrics-empty-message {
@@ -974,23 +973,80 @@
   color: var(--primary-foreground);
 }
 
-.lyrics-find-panel {
+.lyrics-finder {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+.lyrics-finder-search {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.lyrics-finder-search .lyrics-field {
+  flex: 1 1 auto;
+}
+
+.lyrics-finder-error,
+.lyrics-finder-empty {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.7rem;
+  gap: 0.6rem;
   padding: 0.65rem;
   border: var(--line);
   background: var(--secondary);
 }
 
-.lyrics-find-panel p {
-  flex: 1 1 18rem;
+.lyrics-finder-error p,
+.lyrics-finder-empty p {
+  flex: 1 1 14rem;
 }
 
-.lyrics-search-link {
-  color: var(--primary);
+.lyrics-finder-results {
+  display: flex;
+  max-height: 11rem;
+  overflow: auto;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.lyrics-finder-result {
+  display: grid;
+  gap: 0.15rem;
+  padding: 0.45rem 0.55rem;
+  border: 2px solid var(--border);
+  background: var(--background);
+  color: var(--foreground);
+  text-align: left;
+}
+
+.lyrics-finder-result.selected {
+  border-color: var(--foreground);
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.lyrics-finder-result:disabled {
+  opacity: 0.5;
+}
+
+.lyrics-finder-result-title {
+  overflow-wrap: anywhere;
   font-weight: 800;
+}
+
+.lyrics-finder-result-meta,
+.lyrics-finder-result small {
+  overflow-wrap: anywhere;
+  font-family: var(--font-mono-local);
+  font-size: 0.62rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .lyrics-field {

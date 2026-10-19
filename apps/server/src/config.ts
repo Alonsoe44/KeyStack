@@ -11,6 +11,9 @@ export type Config = {
   aconnectTimeoutMs: number
   /** FluidSynth's command shell (`-o shell.port=`), used to switch voices. */
   synthShellPort: number
+  /** LRCLIB, the source the lyrics editor's "Find lyrics" tab searches. */
+  lrclibBaseUrl: string
+  lrclibTimeoutMs: number
 }
 
 type Env = Record<string, string | undefined>
@@ -42,6 +45,20 @@ function nonEmpty(env: Env, name: string, fallback: string): string {
   return raw
 }
 
+function httpUrl(env: Env, name: string, fallback: string): string {
+  const raw = nonEmpty(env, name, fallback)
+  let url: URL
+  try {
+    url = new URL(raw)
+  } catch {
+    throw new Error(`Invalid ${name}="${raw}": expected an http(s) URL`)
+  }
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new Error(`Invalid ${name}="${raw}": expected an http(s) URL`)
+  }
+  return raw.replace(/\/+$/, "")
+}
+
 /** Throws with a clear message on the first invalid value. */
 export function loadConfig(env: Env = process.env): Config {
   return {
@@ -56,5 +73,7 @@ export function loadConfig(env: Env = process.env): Config {
     pollIntervalMs: integer(env, "POLL_INTERVAL_MS", 500, 50, 60_000),
     aconnectTimeoutMs: integer(env, "ACONNECT_TIMEOUT_MS", 2000, 100, 60_000),
     synthShellPort: integer(env, "SYNTH_SHELL_PORT", 9800, 1, 65535),
+    lrclibBaseUrl: httpUrl(env, "LRCLIB_BASE_URL", "https://lrclib.net"),
+    lrclibTimeoutMs: integer(env, "LRCLIB_TIMEOUT_MS", 8000, 500, 60_000),
   }
 }

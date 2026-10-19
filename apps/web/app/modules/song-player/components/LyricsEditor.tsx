@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { ApiRequestError, saveLyrics } from "../adapters/songstreamer-client"
 import { clamp } from "../core/playback"
 import { KaraokeLyrics } from "./KaraokeLyrics"
+import { LyricsFinder } from "./LyricsFinder"
 import { useLyricsNavigationGuard } from "./LyricsNavigationGuard"
 import { useSongPlayer } from "./SongPlayerProvider"
 
@@ -203,7 +204,7 @@ export function LyricsEditor({
   const initialText = useMemo(() => (existing ? existing.lines.map((line) => line.text).join("\n") : ""), [existing])
   const [draft, setDraft] = useState<Draft>(initialDraft)
   const [sourceText, setSourceText] = useState(initialText)
-  const [sourceTab, setSourceTab] = useState<SourceTab>("paste")
+  const [sourceTab, setSourceTab] = useState<SourceTab>(existing ? "paste" : "find")
   const [phase, setPhase] = useState<EditorPhase>(existing ? "source" : "source")
   const [selectedLine, setSelectedLine] = useState(0)
   const [selectedWord, setSelectedWord] = useState(0)
@@ -269,8 +270,8 @@ export function LyricsEditor({
     const language = event.target.value
     commit({ ...draft, language })
   }
-  const applySource = () => {
-    const parsed = parseText(sourceText)
+  const applySource = (text: string = sourceText) => {
+    const parsed = parseText(text)
     if (parsed.length === 0) {
       setTextError("Paste at least one lyric line first.")
       return
@@ -278,7 +279,7 @@ export function LyricsEditor({
     setTextError(null)
     const hasTiming = draft.lines.some((line) => line.startMs !== null || line.words.some((word) => word.startMs !== null))
     if (hasTiming && !isCompatible(draft.lines, parsed) && !window.confirm("Changing the line or word structure will clear timing for the affected lines. Continue?")) return
-    const next = hasTiming ? applyText(draft, sourceText) : { language: draft.language, lines: parsed }
+    const next = hasTiming ? applyText(draft, text) : { language: draft.language, lines: parsed }
     commit(next)
     setSelectedLine(0)
     setSelectedWord(0)
@@ -564,11 +565,16 @@ export function LyricsEditor({
             <button type="button" role="tab" aria-selected={sourceTab === "paste"} className={sourceTab === "paste" ? "lyrics-source-tab active" : "lyrics-source-tab"} onClick={() => setSourceTab("paste")}>Paste lyrics</button>
           </div>
           {sourceTab === "find" ? (
-            <div className="lyrics-find-panel">
-              <p>Open a search tab, copy the words you want to use, then return here and paste them.</p>
-              <a className="lyrics-search-link" href={`https://www.google.com/search?q=${encodeURIComponent(`${song.artist} ${song.title} lyrics`)}`} target="_blank" rel="noreferrer">Open web search</a>
-              <Button type="button" variant="outline" onClick={() => setSourceTab("paste")}>Paste copied lyrics</Button>
-            </div>
+            <LyricsFinder
+              song={song}
+              onPaste={() => setSourceTab("paste")}
+              onUse={(text) => {
+                // Returning to the source later shows the found text, ready to edit.
+                setSourceText(text)
+                setSourceTab("paste")
+                applySource(text)
+              }}
+            />
           ) : (
             <>
               <label className="lyrics-field">
@@ -584,9 +590,11 @@ export function LyricsEditor({
             <label className="lyrics-field lyrics-language-field"><span>Language</span><input value={draft.language} onChange={setLanguage} maxLength={32} /></label>
             {textError && <p className="lyrics-error" role="alert">{textError}</p>}
           </div>
-          <div className="lyrics-editor-actions">
-            <Button type="button" className="button-yellow" onClick={applySource}>Use lyrics</Button>
-          </div>
+          {sourceTab === "paste" && (
+            <div className="lyrics-editor-actions">
+              <Button type="button" className="button-yellow" onClick={() => applySource()}>Use lyrics</Button>
+            </div>
+          )}
         </>
       )}
 

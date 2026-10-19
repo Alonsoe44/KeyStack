@@ -86,6 +86,8 @@ flowchart TB
 
   voices -- "GET /api/instruments<br/>POST /api/instruments/select" --> api
   settings -- "GET /api/status<br/>POST /api/system/poweroff" --> api
+  songs -- "GET /api/v1/lyrics/lookup<br/>GET /api/v1/lyrics/search" --> api
+  api -- "plain lyrics<br/>(HTTPS)" --> lrclib["LRCLIB<br/>lrclib.net"]
   ws -- "midi.status snapshots" --> settings
   songs -- "GET /songs, /songs/:id<br/>GET /songs/:id/audio<br/>GET/PUT /api/v1/songs/:id/lyrics" --> ss
   imports -- "POST /api/v1/import/inspect<br/>POST /api/v1/import/jobs<br/>GET /api/v1/import/jobs/:id" --> ss
@@ -114,6 +116,17 @@ lines/words, and integer millisecond timestamps. `PUT
 stale recording hash leaves the previous saved document available. The public
 API has no auth layer, and the separate local/client Pi never talks to SQLite
 directly.
+
+The editor's **Find lyrics** tab gets the words from LRCLIB (lrclib.net)
+through the local server, never from the browser directly. It first asks for
+the exact recording (title, artist, album and the song's `duration`, which
+LRCLIB matches within about two seconds), then falls back to a search the
+user can refine with the on-screen keyboard. Only plain text is used:
+`plainLyrics`, or `syncedLyrics` with every LRC timestamp removed when the
+plain text is empty. All line and word timing is still done in the editor
+against the exact recording. Picking a result goes straight to the text
+preview; the text stays in the Paste tab for corrections. The lyrics source is
+not saved with the document yet (see "Not built yet").
 
 | Service | Role | If it dies |
 |---|---|---|
@@ -184,6 +197,7 @@ src/
     ClockPort.ts            now + schedule (so tests control time)
     LoggerPort.ts           info / warn / error
     SystemPowerPort.ts      power the machine off
+    LyricsSourcePort.ts     exact lookup + search for plain lyrics
   adapters/
     alsa/AconnectSequencerAdapter.ts   SequencerPort via the `aconnect` CLI
     alsa/parseAconnectList.ts          pure parser for `aconnect -l`
@@ -191,6 +205,9 @@ src/
     ws/WebSocketEventPublisher.ts      EventPublisherPort, broadcasts to clients
     http/statusRoutes.ts               GET /api/status, /api/health
     http/systemRoutes.ts               POST /api/system/poweroff
+    http/lyricsRoutes.ts               GET /api/v1/lyrics/lookup, /search
+    lrclib/LrclibAdapter.ts            LyricsSourcePort via the LRCLIB API
+  domain/lyrics-lookup/plainText.ts    pure: plain text, LRC timestamps removed
   config.ts           env-based config, validated at startup
   main.ts             composition root
 ```
@@ -244,7 +261,16 @@ frontend from `STATIC_DIR`.
 | `GET /api/instruments` | `{ selected: InstrumentId, volume: 0-100 }`: the piano's current voice and volume |
 | `POST /api/instruments/select` | `{ instrumentId }`. Switches FluidSynth's voice. `400` for an unknown id, `503` (with `error`) when the synth can't be reached; the selection only changes on success |
 | `POST /api/instruments/volume` | `{ volume: 0-100 }`. Sets FluidSynth's master gain (100 = gain 0.8; the default 63 matches the unit's `-g 0.5`). Same errors as above |
+| `GET /api/v1/lyrics/lookup?title=&artist=&album=&duration=` | `{ match: LyricsCandidate \| null }`: LRCLIB's record for this exact recording. `album` and `duration` (seconds) are optional |
+| `GET /api/v1/lyrics/search?q=` | `{ results: LyricsCandidate[] }`, at most 20, plain text only |
 | WebSocket `/ws` | Sends a `midi.status` snapshot on connect, then broadcasts every `KeyStackEvent` as JSON |
+
+The lyrics routes answer `400 INVALID_REQUEST` for missing or over-long
+fields, `504 LYRICS_SOURCE_TIMEOUT` when LRCLIB takes longer than
+`LRCLIB_TIMEOUT_MS`, and `502 LYRICS_SOURCE_UNAVAILABLE` /
+`LYRICS_SOURCE_INVALID_RESPONSE` otherwise, as `{ error: { code, message } }`.
+They are read-only and safe to retry; "no match" is a `200` with an empty
+result.
 
 A full snapshot accompanies every change, so a client that missed an event
 still converges on the right state.
@@ -296,6 +322,8 @@ message on an invalid value.
 | `POLL_INTERVAL_MS` | `500` | Reconcile interval |
 | `ACONNECT_TIMEOUT_MS` | `2000` | Timeout per `aconnect` call |
 | `SYNTH_SHELL_PORT` | `9800` | FluidSynth's command shell, used to switch voices and volume |
+| `LRCLIB_BASE_URL` | `https://lrclib.net` | Lyrics source for the editor's Find tab |
+| `LRCLIB_TIMEOUT_MS` | `8000` | Timeout per LRCLIB request |
 | `CORS_ORIGIN` | unset | `Access-Control-Allow-Origin` for `/api`; only needed in dev, where `next dev` is a different origin |
 
 To use a different keyboard, set `KEYBOARD_CLIENT_PREFIX` and
@@ -334,7 +362,8 @@ in lighter form:
   [backend-endpoints.md](../backend-endpoints.md), types in
   `keystack-shared`). `adapters/songstreamer-client.ts` calls `GET /songs`
   and `GET /songs/:id` on `NEXT_PUBLIC_SONGS_API_BASE_URL` and validates the
-  payloads. `components/SongPlayerProvider.tsx` owns the app's single
+  payloads. `adapters/lyrics-lookup-client.ts` calls the local server's
+  `/api/v1/lyrics/*` routes for the editor's `components/LyricsFinder.tsx`. `components/SongPlayerProvider.tsx` owns the app's single
   `HTMLAudioElement`, mounted in the root layout so playback continues
   across routes; its `src` is `/songs/:id/audio` and the browser streams it
   with native Range requests. Screens use hash routing (`#/` list,
@@ -370,6 +399,10 @@ browser.
 - **Reconciler** — an in-memory fake `SequencerPort`, a spy publisher and a
   fake clock, covering each case listed above plus `connect` and
   `listClients` failures.
+- **Lyrics lookup** — LRC timestamp removal, the LRCLIB adapter against a
+  stubbed `fetch` (query, User-Agent, 404 as no match, malformed records,
+  timeouts and errors), and the routes' validation and error mapping. The
+  fixtures use invented lyrics only.
 
 ## Not built yet
 
@@ -378,3 +411,5 @@ browser.
 - Other engines behind a `SoundEngine` port (sfizz, Pianoteq)
 - Reading MIDI notes in the backend for UI features such as chord detection
 - Driving the WS2812 status LED
+- Saving where lyrics came from (`source: "lrclib"` and its record id) with the
+  lyrics document; this needs a SongStreamer contract and schema change

@@ -5,8 +5,10 @@ import type { KeyStackEvent } from "keystack-shared"
 import { AconnectSequencerAdapter } from "./adapters/alsa/AconnectSequencerAdapter"
 import { FluidSynthShellAdapter } from "./adapters/fluidsynth/FluidSynthShellAdapter"
 import { instrumentRoutes } from "./adapters/http/instrumentRoutes"
+import { lyricsRoutes } from "./adapters/http/lyricsRoutes"
 import { statusRoutes } from "./adapters/http/statusRoutes"
 import { systemRoutes } from "./adapters/http/systemRoutes"
+import { LrclibAdapter } from "./adapters/lrclib/LrclibAdapter"
 import { SystemctlPowerAdapter } from "./adapters/system/SystemctlPowerAdapter"
 import { WebSocketEventPublisher } from "./adapters/ws/WebSocketEventPublisher"
 import { type Config, loadConfig } from "./config"
@@ -80,6 +82,18 @@ function main(): void {
   )
   app.use("/api", systemRoutes(new SystemctlPowerAdapter(), logger))
   app.use("/api", instrumentRoutes(instruments))
+  app.use(
+    "/api/v1",
+    lyricsRoutes(
+      new LrclibAdapter({
+        baseUrl: config.lrclibBaseUrl,
+        timeoutMs: config.lrclibTimeoutMs,
+        // LRCLIB asks clients to identify themselves.
+        userAgent: "KeyStack/0.0.1 (piano kiosk lyrics editor)",
+      }),
+      logger
+    )
+  )
   // The static export has both scales.html and a scales/ directory, so
   // /scales has to be mapped to the .html file before express.static sees it.
   app.get(/.*/, (req, res, next) => {
