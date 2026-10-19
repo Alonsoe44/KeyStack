@@ -215,6 +215,11 @@ search build, is at `~/keystack/releases/keyboard-20261019/out.previous`.
 `keystack-server`, `fluidsynth`, and `keystack-kiosk` reported active after the
 kiosk reload. Typing on the touch screen is for the user to accept on the Pi.
 
+The thick `ScrollArea` scrollbar (commit `5223fce`) followed the same way; the
+keyboard build it replaced is at
+`~/keystack/releases/scrollbar-20261019/out.previous`, and all three services
+reported active after the reload.
+
 ## The kiosk
 
 `~/keystack/kiosk.sh [url]` (source: `deploy/kiosk/kiosk.sh`) shows a URL
