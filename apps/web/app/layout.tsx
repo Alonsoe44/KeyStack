@@ -2,6 +2,7 @@ import "./globals.css"
 import { SongPlayerProvider } from "@/app/modules/song-player/components/SongPlayerProvider"
 import { LyricsNavigationGuardProvider } from "@/app/modules/song-player/components/LyricsNavigationGuard"
 import { ImportJobProvider } from "@/app/modules/song-import/components/ImportJobProvider"
+import { OnScreenKeyboard } from "@/app/modules/onscreen-keyboard/components/OnScreenKeyboard"
 import { AppShell } from "@/components/app-shell"
 import { ThemeProvider } from "@/components/theme-provider"
 
@@ -22,6 +23,7 @@ export default function RootLayout({
             <ImportJobProvider>
               <LyricsNavigationGuardProvider>
                 <AppShell>{children}</AppShell>
+                <OnScreenKeyboard />
               </LyricsNavigationGuardProvider>
             </ImportJobProvider>
           </SongPlayerProvider>

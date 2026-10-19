@@ -218,6 +218,16 @@ as the transient user unit `keystack-kiosk` with its own profile
 on the desktop. labwc's autostart, `pi:deploy` and `pi:dev` all go through
 it.
 
+**Typing on the touch screen.** Raspberry Pi OS's system keyboard
+(squeekboard) cannot be used here: Chromium only asks for it with
+`--enable-wayland-ime`, and even then labwc draws it on the `top` layer,
+*below* a fullscreen/kiosk window, so it stays hidden. Instead the frontend has
+its own on-screen keyboard (`apps/web/app/modules/onscreen-keyboard/`), which
+opens for any focused text field. The production build turns it on with
+`NEXT_PUBLIC_ONSCREEN_KEYBOARD=on` in `apps/web/.env.production`; `auto` (the
+dev default) shows it only on touch screens without a mouse or trackpad, and
+`off` disables it. No Pi package, compositor or Chromium flag change is needed.
+
 ```bash
 ssh $PI_HOST keystack/kiosk.sh                        # show the deployed build
 ssh $PI_HOST systemctl --user stop keystack-kiosk     # close it, back to the desktop

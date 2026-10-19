@@ -341,6 +341,13 @@ in lighter form:
   `#/songs/<id>` player) so deep links work on the static export. `core/`
   holds the pure seek/clamp and time-format logic.
 
+- `onscreen-keyboard/` — KeyStack's own touch keyboard, mounted once in the
+  root layout. It opens for any focused text field, types through the field's
+  normal input events (so React `onChange` works unchanged), and publishes its
+  height as `--osk-height` so the app and fixed panels end above it. Editing
+  logic in `core/` is pure and unit-tested; `NEXT_PUBLIC_ONSCREEN_KEYBOARD`
+  (`on`/`off`/`auto`) controls it. It exists because squeekboard cannot draw
+  above the fullscreen kiosk on labwc.
 - `song-import/` — the public YouTube import kiosk. It calls SongStreamer for
   metadata inspection, requires editable title/artist/optional album
   confirmation before creating a job, persists the active job ID across a

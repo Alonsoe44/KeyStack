@@ -2318,6 +2318,99 @@
   }
 }
 
+/* On-screen keyboard (kiosk). The app and fixed panels end above it. */
+
+html.osk-open .keystack-app {
+  height: calc(100svh - var(--osk-height, 0px));
+}
+
+html.osk-open .source-search,
+html.osk-open .lyrics-modal-backdrop {
+  bottom: var(--osk-height, 0px);
+}
+
+.osk {
+  position: fixed;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 90;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  padding: 0.35rem 0.4rem 0.45rem;
+  border-top: var(--line);
+  background: var(--secondary);
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.osk-row {
+  display: flex;
+  gap: 0.3rem;
+}
+
+.osk-key {
+  display: inline-flex;
+  min-width: 0;
+  min-height: 2.65rem;
+  flex: 1 1 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0 0.2rem;
+  border: var(--line);
+  border-radius: 0;
+  background: var(--card);
+  color: var(--foreground);
+  font-family: var(--font-body);
+  font-size: 1.05rem;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.osk-key svg {
+  width: 1.2rem;
+  height: 1.2rem;
+}
+
+.osk-key:active,
+.osk-key-active {
+  background: var(--accent);
+}
+
+.osk-key-wide {
+  flex-grow: 1.5;
+  font-family: var(--font-mono-local);
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.osk-key-space {
+  flex-grow: 5;
+  color: var(--muted-foreground);
+  font-family: var(--font-mono-local);
+  font-size: 0.7rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.osk-key-enter {
+  background: var(--primary);
+  color: var(--primary-foreground);
+}
+
+.osk-key-enter:active {
+  background: var(--accent);
+  color: var(--foreground);
+}
+
+@media (max-height: 520px) {
+  .osk-key {
+    min-height: 2.45rem;
+  }
+}
+
 .import-spin {
   animation: import-spin 900ms linear infinite;
 }
