@@ -1,0 +1,17 @@
+client 0: 'System' [type=kernel]
+    0 'Timer           '
+	Connecting To: 142:0
+    1 'Announce        '
+	Connecting To: 142:0
+client 14: 'Midi Through' [type=kernel]
+    0 'Midi Through Port-0'
+client 20: 'Launchkey Mini MK4 37' [type=kernel,card=1]
+    0 'Launchkey Mini MK4 37 MIDI In'
+    1 'Launchkey Mini MK4 37 DAW In'
+client 128: 'FLUID Synth (2547)' [type=user,pid=2547]
+    0 'Synth input port (2547:0)'
+client 142: 'PipeWire-System' [type=user,UMP-MIDI2,pid=1358]
+    0 'input           '
+	Connected From: 0:1, 0:0
+client 143: 'PipeWire-RT-Event' [type=user,UMP-MIDI2,pid=1358]
+    0 'input           '

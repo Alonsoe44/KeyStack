@@ -1,0 +1,10 @@
+{
+  // The core must run anywhere (Node or a browser), so it is checked
+  // without Node's types: importing node:* or using Buffer fails here.
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": []
+  },
+  "include": ["src/core.ts", "src/core/**/*.ts"],
+  "exclude": ["src/**/*.test.ts"]
+}

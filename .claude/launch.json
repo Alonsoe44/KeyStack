@@ -1,0 +1,39 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "keystack-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 3000
+    },
+    {
+      "name": "keystack-server",
+      "runtimeExecutable": "env",
+      "runtimeArgs": [
+        "SYNTH_SHELL_PORT=9899",
+        "npm",
+        "run",
+        "dev:server"
+      ],
+      "port": 4000
+    },
+    {
+      "name": "keystack-dev-3001",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--workspace",
+        "apps/web",
+        "--",
+        "-p",
+        "3001"
+      ],
+      "port": 3001
+    }
+  ]
+}
