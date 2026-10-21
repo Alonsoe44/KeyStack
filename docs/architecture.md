@@ -412,6 +412,18 @@ in lighter form:
   reconnecting with backoff (0.5s doubling to 5s) and re-fetching on each
   attempt. `components/MidiStatusPanel.tsx` shows keyboard / synth / route on
   the Settings page.
+  The same module carries the Launchkey's frontend side:
+  `adapters/controller-client.ts` opens its own `/ws` socket (same backoff)
+  and follows `controller.control` and `controller.status`.
+  `components/ControllerProvider.tsx`, mounted in the root layout, holds that
+  one subscription and a dispatcher (`core/controller-bindings.ts`). A screen
+  calls `useControllerBindings({ buttons, pads, knobs, capture })` to bind
+  controls while it is mounted. Buttons and pads fire on press only; knobs
+  pass their signed `delta`. The most recently mounted binding gets each
+  control first, unbound controls fall through to the one underneath, and
+  `capture: true` (for dialogs) stops that. `useControllerStatus()` returns
+  the last `controller.status`, or `null` while `/ws` is down. No screen
+  binds any control yet; the per-screen mapping is the next phase.
 - `system-power/` — the power button on the Settings page. It opens a
   confirmation dialog (`components/ui/alert-dialog.tsx`) and, on confirm,
   calls `POST /api/system/poweroff`.
@@ -470,6 +482,9 @@ browser.
   lifecycle against an in-memory `FakeTransport`, and `AmidiTransport`
   against a fake `amidi` script. The core is also type-checked without
   Node's types, so it stays usable in a browser.
+- **Controller bindings** (`apps/web`) — the dispatcher's press-only,
+  layering, fall-through and capture rules, and the `/ws` client against a
+  stubbed socket (URL, frame filtering, backoff, stop).
 
 ## Not built yet
 
@@ -478,5 +493,6 @@ browser.
 - Other engines behind a `SoundEngine` port (sfizz, Pianoteq)
 - Reading MIDI notes in the backend for UI features such as chord detection
 - Driving the WS2812 status LED
+- Per-screen Launchkey mappings (the frontend hook exists; no screen binds controls yet)
 - Saving where lyrics came from (`source: "lrclib"` and its record id) with the
   lyrics document; this needs a SongStreamer contract and schema change
